@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { TenantConnectionToggle } from "@/components/TenantConnectionToggle";
 
 type User = {
   id: string;
@@ -117,6 +118,7 @@ export default function ContactPage() {
         <span className="font-mono">externalUserId</span> in the SDK = your demo user id{" "}
         <span className="font-mono">{user.id}</span> &middot; tenant: <span className="font-mono">{user.tenantId}</span>
       </p>
+      <TenantConnectionToggle />
       <form className="space-y-3 rounded-3xl border border-[var(--border)] bg-white/90 p-5 shadow" onSubmit={onSave}>
         {["fullName", "email", "phone"].map((k) => (
           <div key={k}>
@@ -151,17 +153,17 @@ export default function ContactPage() {
           disabled={saving}
           className="w-full rounded-xl bg-[var(--accent)] py-2.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {saving ? "Hailing the primary (or mock) purr-vider…" : "Save & nudge the primary"}
+          {saving ? "Hailing NextAddress (or mock) purr-vider…" : "Save & nudge NextAddress"}
         </button>
       </form>
       {primary && !primary.attemptedPrimary ? (
         <p className="rounded-2xl border border-dashed border-[var(--border)] bg-amber-50/60 p-4 text-sm text-[var(--muted)]">
-          You didn&rsquo;t change anything, so we didn&rsquo;t yowl at the primary. Tweak a field, then try again.
+          You didn&rsquo;t change anything, so we didn&rsquo;t yowl at NextAddress. Tweak a field, then try again.
         </p>
       ) : null}
       {primary && primary.attemptedPrimary && primary.results.length > 0 ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--page)] p-4 text-sm">
-          <h2 className="font-semibold text-[var(--ink)]">What the primary said (most recent first)</h2>
+          <h2 className="font-semibold text-[var(--ink)]">What NextAddress said (most recent first)</h2>
           <ul className="mt-2 list-disc pl-4 text-[var(--muted)]">
             {primary.results.map((r, i) => (
               <li key={i}>

@@ -1,6 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import {
+  DEMO_USER_LISA_ID,
+  DEMO_USER_WHISKERS_ID,
+  LEGACY_DEMO_USER_IDS,
+} from "./demo-user-ids";
 
 const DB_PATH = path.join(process.cwd(), "data", "paws-tails.db");
 
@@ -23,7 +28,20 @@ function migrate(database: Database.Database) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS tenant_connection (
+      tenant_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK (status IN ('connected', 'disconnected')),
+      updated_at TEXT NOT NULL
+    );
   `);
+}
+
+function migrateLegacyUserIds(database: Database.Database) {
+  const update = database.prepare("UPDATE users SET id = @to WHERE id = @from");
+  for (const [from, to] of Object.entries(LEGACY_DEMO_USER_IDS)) {
+    update.run({ from, to });
+  }
 }
 
 function seedIfEmpty(database: Database.Database) {
@@ -37,7 +55,7 @@ function seedIfEmpty(database: Database.Database) {
   );
   const rows = [
     {
-      id: "mews_wellington",
+      id: DEMO_USER_WHISKERS_ID,
       email: "whiskers@example.com",
       full_name: "Whiskers Wellington",
       phone: "+15550001111",
@@ -48,7 +66,7 @@ function seedIfEmpty(database: Database.Database) {
       postal_code: "78701",
     },
     {
-      id: "bark_paulsen",
+      id: DEMO_USER_LISA_ID,
       email: "bark@example.com",
       full_name: "Bark Paulsen",
       phone: "+15550002222",
@@ -84,6 +102,7 @@ export function getDb() {
   const database = new Database(DB_PATH);
   database.pragma("journal_mode = WAL");
   migrate(database);
+  migrateLegacyUserIds(database);
   seedIfEmpty(database);
   dbInstance = database;
   return database;

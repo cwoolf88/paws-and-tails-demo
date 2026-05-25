@@ -7,11 +7,11 @@ export function PawsFooter() {
           <p className="text-xs">
             Built to show the{" "}
             <code className="rounded bg-black/[0.04] px-1 py-0.5">next-address-server-js</code> link between your app and
-            a primary address hub.
+            NextAddress.
           </p>
         </div>
         <p className="mt-3 text-xs">
-          Contact updates post to the primary (or mock) server; webhooks re-verify and patch your local user row. Purr-iod.
+          Contact updates post to NextAddress (or mock) server; webhooks re-verify and patch your local user row. Purr-iod.
         </p>
       </div>
     </footer>

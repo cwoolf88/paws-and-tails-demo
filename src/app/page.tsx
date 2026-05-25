@@ -13,7 +13,7 @@ export default function HomePage() {
           </h1>
           <p className="mt-4 text-lg text-[var(--muted)]">
             Paws and Tails is a pretend pet subscription service with a real purpose: showing how a third-party app
-            nudges a primary address system using{" "}
+            nudges NextAddress using{" "}
             <code className="rounded bg-white px-1.5 py-0.5 text-sm ring-1 ring-[var(--border)]">next-address-server-js</code>{" "}
             — PATCHing contact deltas from your UI, then accepting verified webhooks when the network purrs back.
           </p>
@@ -61,16 +61,16 @@ export default function HomePage() {
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {[
             {
-              title: "Outward (PATCH to primary)",
+              title: "Outward (PATCH to NextAddress)",
               text: "When a pet parent saves contact info, we only send the diffs, using NextAddressClient with method PATCH and your configured path.",
             },
             {
               title: "Webhooks (HMAC, inbound)",
-              text: "The primary nudges us on contact.changed; we verify signature, then map the event to our SQLite user with a small callback you can read like plain English.",
+              text: "NextAddress nudges us on contact.changed; we verify signature, then map the event to our SQLite user with a small callback you can read like plain English.",
             },
             {
               title: "Outcomes (HTTP status + body)",
-              text: "The primary answers with processed, pending, or not-linked vibes — surfaced right next to your form so humans don’t have to read JSON for breakfast.",
+              text: "NextAddress answers with processed, pending, or not-linked vibes — surfaced right next to your form so humans don’t have to read JSON for breakfast.",
             },
           ].map((b) => (
             <div key={b.title} className="rounded-2xl border border-[var(--border)] bg-white/90 p-4">

@@ -1,6 +1,6 @@
 import type { ContactUpdateRequest, ContactUpdateResponseBody } from "next-address-server-js";
 import { NextAddressError } from "next-address-server-js";
-import { isPrimaryMockMode } from "@/lib/config";
+import { isMockRotatingOutcomes } from "@/lib/config";
 import { getContactUpdatePath, getNextAddressClientOrNull } from "@/lib/integrations/primaryClient";
 import type { PublicUser } from "@/lib/db/users";
 import { createHash } from "node:crypto";
@@ -101,6 +101,9 @@ function hashId(body: object) {
 }
 
 function mockResponse(idempotencyKey: string): ContactUpdateResponseBody {
+  if (!isMockRotatingOutcomes()) {
+    return { status: "processed_globally" };
+  }
   const h = createHash("sha256").update(idempotencyKey).digest("hex");
   const b = parseInt(h.slice(0, 2), 16) % 3;
   if (b === 0) return { status: "processed_globally" };
@@ -111,7 +114,8 @@ function mockResponse(idempotencyKey: string): ContactUpdateResponseBody {
     };
   return {
     status: "rejected",
-    message: "No linked profile for this user on the primary (demo: rotate idempotency key to try other outcomes).",
+    message:
+      "No linked profile for this user on NextAddress (rotating mock outcome; tweak a field or turn off NEXT_ADDRESS_MOCK_ROTATE_OUTCOMES).",
   };
 }
 
@@ -141,18 +145,17 @@ export async function pushContactUpdatesToPrimary(
     return { patches: [], results: [], attemptedPrimary: false };
   }
   const client = getNextAddressClientOrNull();
-  const useMock = isPrimaryMockMode() || !client;
   const path = getContactUpdatePath();
   const method = "PATCH" as const;
 
   const results: (ContactUpdateResponseBody & { error?: string })[] = [];
   for (const p of toSend) {
-    if (useMock) {
+    if (!client) {
       results.push({ ...mockResponse(p.idempotencyKey) });
       continue;
     }
     try {
-      const res = await client!.submitContactUpdate(p.body, {
+      const res = await client.submitContactUpdate(p.body, {
         path,
         method,
         idempotencyKey: p.idempotencyKey,
