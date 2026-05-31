@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth/session";
 import {
   getPrimaryBaseUrl,
+  getTenantConnectionBridgeReturnUrl,
   getTenantConnectionReturnUrl,
   isPrimaryMockMode,
 } from "@/lib/config";
@@ -23,7 +24,8 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const primaryBaseUrl = getPrimaryBaseUrl();
-  const returnUrl = getTenantConnectionReturnUrl();
+  const returnUrl = getTenantConnectionBridgeReturnUrl();
+  const pageReturnUrl = getTenantConnectionReturnUrl();
   const tenantId = user.tenantId;
   const externalUserId = user.id;
 
@@ -43,7 +45,8 @@ export async function GET() {
   return NextResponse.json({
     tenantId,
     externalUserId,
-    returnUrl,
+    returnUrl: pageReturnUrl,
+    bridgeReturnUrl: returnUrl,
     primaryBaseUrl: primaryBaseUrl || null,
     connectUrl,
     disconnectUrl,

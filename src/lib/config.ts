@@ -13,13 +13,23 @@ export function getPrimarySignInUrl(redirectUrl?: string) {
   return `${base}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
 }
 
-/** Where primary sends the user after connect / disconnect. */
+function demoBaseUrl() {
+  return (
+    process.env.NEXT_ADDRESS_DEMO_BASE_URL?.trim().replace(/\/$/, "") ||
+    "http://127.0.0.1:3001"
+  );
+}
+
+/** Full contact page (legacy / non-popup flows). */
 export function getTenantConnectionReturnUrl() {
   const explicit = process.env.NEXT_ADDRESS_CONNECT_RETURN_URL?.trim();
   if (explicit) return explicit;
-  const demoBase = process.env.NEXT_ADDRESS_DEMO_BASE_URL?.trim().replace(/\/$/, "");
-  if (demoBase) return `${demoBase}/account/contact`;
-  return "http://127.0.0.1:3001/account/contact";
+  return `${demoBaseUrl()}/account/contact`;
+}
+
+/** Minimal page that closes the bridge popup and refreshes the opener widget only. */
+export function getTenantConnectionBridgeReturnUrl() {
+  return `${demoBaseUrl()}/account/contact/bridge-return`;
 }
 
 export function getWebhookSecret() {

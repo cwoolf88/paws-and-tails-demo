@@ -33,31 +33,20 @@ export async function PUT(request: Request) {
     postalCode: (body.postalCode ?? before.address.postalCode).trim() || before.address.postalCode,
     countryCode: (body.countryCode ?? before.address.countryCode).trim() || before.address.countryCode,
   };
-  const proposed: typeof before = {
-    id: before.id,
-    tenantId: before.tenantId,
-    fullName: next.fullName,
-    email: next.email,
-    phone: next.phone,
-    address: {
-      line1: next.line1,
-      line2: next.line2,
-      city: next.city,
-      region: next.region,
-      postalCode: next.postalCode,
-      countryCode: next.countryCode,
-    },
-    createdAt: before.createdAt,
-    updatedAt: before.updatedAt,
-  };
-  const { patches, results, attemptedPrimary } = await pushContactUpdatesToPrimary(
-    before,
-    proposed,
-  );
   const updated = updateUserById(before.id, next);
   if (!updated) return NextResponse.json({ error: "Update failed" }, { status: 500 });
+
+  const primary = await pushContactUpdatesToPrimary(before, updated);
   return NextResponse.json({
     user: updated,
-    primary: { patches, results, attemptedPrimary },
+    primary: {
+      patches: primary.patches,
+      results: primary.results,
+      attemptedPrimary: primary.attemptedPrimary,
+      savedLocally: true,
+      syncedToNextAddress: primary.syncedToNextAddress,
+      nextAddressHttp4xx: primary.nextAddressHttp4xx,
+      failureMessages: primary.failureMessages,
+    },
   });
 }

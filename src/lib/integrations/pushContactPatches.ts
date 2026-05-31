@@ -127,6 +127,43 @@ function isContactUpdateResponseBody(b: unknown): b is ContactUpdateResponseBody
   return true;
 }
 
+export type PrimaryPatchResult = ContactUpdateResponseBody & {
+  error?: string;
+  /** Set when next-address-primary responded with an HTTP 4xx. */
+  httpStatus?: number;
+};
+
+function isPrimarySyncSuccess(r: PrimaryPatchResult): boolean {
+  return r.status === "processed_globally" || r.status === "pending_user_review";
+}
+
+function isPrimaryHttp4xx(status: number | undefined): boolean {
+  return status !== undefined && status >= 400 && status < 500;
+}
+
+export function summarizePrimarySync(
+  results: PrimaryPatchResult[],
+  attemptedPrimary: boolean,
+): {
+  syncedToNextAddress: boolean;
+  nextAddressHttp4xx: boolean;
+  failureMessages: string[];
+} {
+  if (!attemptedPrimary || results.length === 0) {
+    return { syncedToNextAddress: false, nextAddressHttp4xx: false, failureMessages: [] };
+  }
+  const failures = results.filter(
+    (r) => isPrimaryHttp4xx(r.httpStatus) || r.status === "rejected",
+  );
+  return {
+    syncedToNextAddress: results.every(isPrimarySyncSuccess),
+    nextAddressHttp4xx: failures.some((r) => isPrimaryHttp4xx(r.httpStatus)),
+    failureMessages: failures
+      .map((r) => r.message ?? r.error)
+      .filter((m): m is string => Boolean(m)),
+  };
+}
+
 /**
  * Pushes one PATCH per changed contact dimension to next-address-primary.
  * Bodies are minimal (only the slice that actually changed, plus routing ids).
@@ -136,19 +173,29 @@ export async function pushContactUpdatesToPrimary(
   after: PublicUser,
 ): Promise<{
   patches: ContactUpdateRequest[];
-  results: (ContactUpdateResponseBody & { error?: string })[];
+  results: PrimaryPatchResult[];
   attemptedPrimary: boolean;
+  syncedToNextAddress: boolean;
+  nextAddressHttp4xx: boolean;
+  failureMessages: string[];
 }> {
   const base = { tenantId: after.tenantId, externalUserId: after.id };
   const toSend = buildChangedPatches(before, after, base);
   if (toSend.length === 0) {
-    return { patches: [], results: [], attemptedPrimary: false };
+    return {
+      patches: [],
+      results: [],
+      attemptedPrimary: false,
+      syncedToNextAddress: false,
+      nextAddressHttp4xx: false,
+      failureMessages: [],
+    };
   }
   const client = getNextAddressClientOrNull();
   const path = getContactUpdatePath();
   const method = "PATCH" as const;
 
-  const results: (ContactUpdateResponseBody & { error?: string })[] = [];
+  const results: PrimaryPatchResult[] = [];
   for (const p of toSend) {
     if (!client) {
       results.push({ ...mockResponse(p.idempotencyKey) });
@@ -163,7 +210,11 @@ export async function pushContactUpdatesToPrimary(
       results.push(res);
     } catch (e) {
       if (e instanceof NextAddressError && e.body && isContactUpdateResponseBody(e.body)) {
-        results.push({ ...e.body });
+        results.push({
+          ...e.body,
+          httpStatus: e.status,
+          error: isPrimaryHttp4xx(e.status) ? e.message : undefined,
+        });
         continue;
       }
       if (e instanceof NextAddressError) {
@@ -175,6 +226,7 @@ export async function pushContactUpdatesToPrimary(
           status: "rejected",
           message: msg,
           error: e.message,
+          httpStatus: e.status,
         });
         continue;
       }
@@ -186,5 +238,11 @@ export async function pushContactUpdatesToPrimary(
       });
     }
   }
-  return { patches: toSend.map((x) => x.body), results, attemptedPrimary: true };
+  const summary = summarizePrimarySync(results, true);
+  return {
+    patches: toSend.map((x) => x.body),
+    results,
+    attemptedPrimary: true,
+    ...summary,
+  };
 }

@@ -20,19 +20,19 @@ export default function HomePage() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href="/shop"
-              className="rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[var(--glow)]"
+              className="btn-primary rounded-xl px-5 py-2.5 text-sm shadow-md shadow-[var(--glow)]"
             >
-              See what’s in the chow
+              Browse products
             </Link>
             <Link
               href="/account/contact"
-              className="rounded-xl border border-[var(--border)] bg-white/80 px-5 py-2.5 text-sm font-semibold text-[var(--ink)] shadow-sm"
+              className="rounded-xl border border-[var(--border)] bg-[var(--page)] px-5 py-2.5 text-sm font-semibold text-[var(--ink)] shadow-sm hover:bg-[var(--accent-btn)]"
             >
               Edit contact info
             </Link>
           </div>
           <p className="mt-4 text-sm text-[var(--muted)]">
-            Tip: sign in to try “Paws-words” — you’ll need it for the contact form.
+            Tip: sign in to open the contact form and try NextAddress sync.
           </p>
         </div>
         <div className="relative">

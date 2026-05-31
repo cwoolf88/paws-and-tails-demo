@@ -17,7 +17,9 @@
     "next": "15.5.15",
     "next-address-server-js": "file:../next-address-server-js",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-phone-number-input": "^3.4.17",
+    "react-select": "^5.10.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

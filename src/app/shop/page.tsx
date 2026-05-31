@@ -51,13 +51,13 @@ export default function ShopPage() {
         ))}
       </ul>
       <p className="text-center text-sm text-[var(--muted)]">
-        Ready to set your return address?{" "}
+        Ready to set your shipping address?{" "}
         <Link className="font-semibold text-[var(--accent)] underline decoration-dotted underline-offset-2" href="/account/contact">
-          Tweak the profile that ships with every box
+          Update contact information
         </Link>{" "}
         (or{" "}
         <Link className="font-semibold" href="/login">
-          mosey into the den
+          sign in
         </Link>{" "}
         first).
       </p>

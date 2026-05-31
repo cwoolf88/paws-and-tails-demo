@@ -24,14 +24,14 @@ export async function SiteHeader() {
             className="rounded-lg px-3 py-1.5 transition hover:bg-black/[0.04] hover:text-[var(--ink)]"
             href="/shop"
           >
-            Chow
+            Shop
           </Link>
           {u ? (
             <Link
               className="rounded-lg px-3 py-1.5 transition hover:bg-black/[0.04] hover:text-[var(--ink)]"
               href="/account/contact"
             >
-              Paws-words
+              Contact
             </Link>
           ) : null}
         </nav>
@@ -45,7 +45,7 @@ export async function SiteHeader() {
             <form action={logout} className="inline">
               <button
                 type="submit"
-                className="rounded-lg border border-[var(--border)] bg-white/70 px-3 py-1.5 text-sm font-medium text-[var(--ink)] shadow-sm hover:bg-white"
+                className="rounded-lg border border-[var(--border)] bg-[var(--page)] px-3 py-1.5 text-sm font-medium text-[var(--ink)] shadow-sm hover:bg-[var(--accent-btn)]"
               >
                 Logout
               </button>
@@ -53,9 +53,9 @@ export async function SiteHeader() {
           ) : (
             <Link
               href="/login"
-              className="rounded-lg bg-[var(--accent)] px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:opacity-95"
+              className="btn-primary rounded-lg px-3.5 py-1.5 text-sm shadow-sm"
             >
-              Get inside the den
+              Sign in
             </Link>
           )}
         </div>
