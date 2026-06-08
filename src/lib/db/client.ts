@@ -15,7 +15,6 @@ function migrate(database: Database.Database) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      tenant_id TEXT NOT NULL,
       email TEXT NOT NULL,
       full_name TEXT NOT NULL,
       phone TEXT NOT NULL DEFAULT '',
@@ -26,12 +25,6 @@ function migrate(database: Database.Database) {
       postal_code TEXT NOT NULL DEFAULT '',
       country_code TEXT NOT NULL DEFAULT 'US',
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS tenant_connection (
-      tenant_id TEXT PRIMARY KEY,
-      status TEXT NOT NULL CHECK (status IN ('connected', 'disconnected')),
       updated_at TEXT NOT NULL
     );
   `);
@@ -48,10 +41,9 @@ function seedIfEmpty(database: Database.Database) {
   const n = database.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number };
   if (n.c > 0) return;
   const now = new Date().toISOString();
-  const tenant = process.env.NEXT_ADDRESS_TENANT_ID?.trim() || "demo-tenant";
   const ins = database.prepare(
-    `INSERT INTO users (id, tenant_id, email, full_name, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at)
-     VALUES (@id, @tenant_id, @email, @full_name, @phone, @line1, @line2, @city, @region, @postal_code, @country_code, @created_at, @updated_at)`,
+    `INSERT INTO users (id, email, full_name, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at)
+     VALUES (@id, @email, @full_name, @phone, @line1, @line2, @city, @region, @postal_code, @country_code, @created_at, @updated_at)`,
   );
   const rows = [
     {
@@ -80,7 +72,6 @@ function seedIfEmpty(database: Database.Database) {
   for (const r of rows) {
     ins.run({
       id: r.id,
-      tenant_id: tenant,
       email: r.email,
       full_name: r.full_name,
       phone: r.phone,
@@ -110,7 +101,6 @@ export function getDb() {
 
 export type UserRow = {
   id: string;
-  tenant_id: string;
   email: string;
   full_name: string;
   phone: string;

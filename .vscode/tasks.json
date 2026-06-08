@@ -7,6 +7,17 @@
       "script": "build",
       "path": "package.json",
       "group": "build"
+    },
+    {
+      "label": "npm: sdk:sync:local",
+      "type": "npm",
+      "script": "sdk:sync:local",
+      "path": "package.json",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
     }
   ]
 }

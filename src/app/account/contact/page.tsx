@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { ContactBasicPanel } from "./ContactBasicPanel";
 import { ContactCustomPanel } from "./ContactCustomPanel";
 import { ContactIntegrationTabs } from "./ContactIntegrationTabs";
+import { ContactNetworkActivityPanel } from "./ContactNetworkActivityPanel";
+import { ContactSimulationPanel } from "./ContactSimulationPanel";
+import { isSimulationWidgetEnabled } from "@/lib/config";
+import { integrationLoggedFetch } from "@/lib/integrations/integrationLoggedFetch";
+import { getIntegrationSimulationLog } from "@/lib/integrations/integrationSimulationLog";
+import { readSimulationEventsField } from "next-address-server-js/embed";
 import type {
   ContactFormValues,
   ContactIntegrationTab,
@@ -73,7 +79,7 @@ export default function ContactPage() {
     setErr(null);
     setSaving(true);
     setPrimary(null);
-    const r = await fetch("/api/user/contact", {
+    const r = await integrationLoggedFetch("Save contact + sync", "/api/user/contact", {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(form),
@@ -84,7 +90,11 @@ export default function ContactPage() {
       setSaving(false);
       return null;
     }
-    const d = (await r.json()) as { user: ContactUser; primary: ContactPrimaryResult };
+    const d = (await r.json()) as {
+      user: ContactUser;
+      primary: ContactPrimaryResult;
+    };
+    getIntegrationSimulationLog().append(readSimulationEventsField(d));
     setUser(d.user);
     setForm(formFromUser(d.user));
     setPrimary(d.primary);
@@ -125,17 +135,22 @@ export default function ContactPage() {
         .
       </p>
       <p className="text-xs text-[var(--muted)]">
-        <span className="font-mono">externalUserId</span> ={" "}
-        <span className="font-mono">{user.id}</span> &middot; tenant:{" "}
-        <span className="font-mono">{user.tenantId}</span>
+        Signed-in user id: <span className="font-mono">{user.id}</span>
       </p>
+
+      {isSimulationWidgetEnabled() ? (
+        <div className="space-y-4">
+          <ContactSimulationPanel />
+          <ContactNetworkActivityPanel />
+        </div>
+      ) : null}
 
       <ContactIntegrationTabs active={tab} onChange={setTab} />
 
       {tab === "basic" ? (
         <ContactBasicPanel {...panelProps} onSaveContact={saveContact} />
       ) : (
-        <ContactCustomPanel {...panelProps} />
+        <ContactCustomPanel {...panelProps} onSaveContact={saveContact} />
       )}
     </div>
   );

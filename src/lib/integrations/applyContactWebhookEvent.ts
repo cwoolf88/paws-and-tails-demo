@@ -19,9 +19,6 @@ export function applyContactChangeFromPrimary(
   if (!user) {
     return { ok: false, reason: "No local user matches externalUserId" };
   }
-  if (user.tenantId !== event.tenantId) {
-    return { ok: false, reason: "Tenant mismatch" };
-  }
   const next: UpdateUserInput = {
     fullName: user.fullName,
     email: user.email,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getUserById, updateUserById, type UpdateUserInput } from "@/lib/db/users";
 import { getSessionUserId } from "@/lib/auth/session";
 import { pushContactUpdatesToPrimary } from "@/lib/integrations/pushContactPatches";
+import { createServerNetworkCollector } from "@/lib/integrations/serverNetworkLog";
 
 export const runtime = "nodejs";
 
@@ -36,9 +37,12 @@ export async function PUT(request: Request) {
   const updated = updateUserById(before.id, next);
   if (!updated) return NextResponse.json({ error: "Update failed" }, { status: 500 });
 
-  const primary = await pushContactUpdatesToPrimary(before, updated);
+  const networkActivity = createServerNetworkCollector();
+  const primary = await pushContactUpdatesToPrimary(before, updated, { networkActivity });
   return NextResponse.json({
     user: updated,
+    networkActivity,
+    simulationEvents: primary.simulationEvents,
     primary: {
       patches: primary.patches,
       results: primary.results,

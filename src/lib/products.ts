@@ -17,7 +17,7 @@ export const products: Product[] = [
     name: "Feline: Salmon Breezy Dream",
     blurb: "Omega-rich kibble for cats who have purr-sonal trainers.",
     plan: "purr",
-    price: "34.99",
+    price: "31.99",
     per: "month, delivered on your cat’s calendar (always Caturday).",
     imageEmoji: "🍣",
     highlights: [
@@ -30,7 +30,7 @@ export const products: Product[] = [
     name: "Caturday Night Feasters",
     blurb: "Small-batch, big-attitude, with extra sass on the side.",
     plan: "purr",
-    price: "29.99",
+    price: "26.99",
     per: "month, enough attitude for 9 lives.",
     imageEmoji: "🥘",
     highlights: [
@@ -43,7 +43,7 @@ export const products: Product[] = [
     name: "Bark-quet in Gravy",
     blurb: "Slow-braised beef notes with a high-five finish.",
     plan: "wag",
-    price: "32.50",
+    price: "42.99",
     per: "month, for dogs who read nutrition labels and eat them.",
     imageEmoji: "🍖",
     highlights: [
@@ -56,7 +56,7 @@ export const products: Product[] = [
     name: "Pawsta Primavera (Dog Edition)",
     blurb: "Garden veggies and pasta-shaped joy—hold the carb guilt.",
     plan: "wag",
-    price: "30.00",
+    price: "38.99",
     per: "month, for pups who like al dente zoomies.",
     imageEmoji: "🍝",
     highlights: [

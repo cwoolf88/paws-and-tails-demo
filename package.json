@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint",
     "install:sdk:local": "node ./scripts/install-local-sdk.mjs",
-    "sdk:rebuild:local": "node ./scripts/rebuild-local-sdk.mjs"
+    "sdk:rebuild:local": "node ./scripts/rebuild-local-sdk.mjs",
+    "sdk:sync:local": "node ./scripts/sync-local-sdk.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",

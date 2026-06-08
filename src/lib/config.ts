@@ -1,7 +1,3 @@
-export function getTenantId() {
-  return process.env.NEXT_ADDRESS_TENANT_ID?.trim() || "demo-tenant";
-}
-
 export function getPrimaryBaseUrl() {
   return process.env.NEXT_ADDRESS_PRIMARY_BASE_URL?.trim().replace(/\/$/, "") ?? "";
 }
@@ -21,14 +17,14 @@ function demoBaseUrl() {
 }
 
 /** Full contact page (legacy / non-popup flows). */
-export function getTenantConnectionReturnUrl() {
+export function getNextAddressConnectionReturnUrl() {
   const explicit = process.env.NEXT_ADDRESS_CONNECT_RETURN_URL?.trim();
   if (explicit) return explicit;
   return `${demoBaseUrl()}/account/contact`;
 }
 
 /** Minimal page that closes the bridge popup and refreshes the opener widget only. */
-export function getTenantConnectionBridgeReturnUrl() {
+export function getNextAddressConnectionBridgeReturnUrl() {
   return `${demoBaseUrl()}/account/contact/bridge-return`;
 }
 
@@ -50,4 +46,12 @@ export function isPrimaryMockMode() {
 /** When mock primary is on: set to 1 to cycle idempotency-keyed demo outcomes (OK / pending / rejected). */
 export function isMockRotatingOutcomes() {
   return process.env.NEXT_ADDRESS_MOCK_ROTATE_OUTCOMES === "1";
+}
+
+/** Dev tools (simulation + network activity panels). On in development unless explicitly disabled. */
+export function isSimulationWidgetEnabled() {
+  const flag = process.env.NEXT_PUBLIC_SHOW_NEXT_ADDRESS_SIMULATIONS?.trim();
+  if (flag === "0") return false;
+  if (flag === "1") return true;
+  return process.env.NODE_ENV === "development";
 }

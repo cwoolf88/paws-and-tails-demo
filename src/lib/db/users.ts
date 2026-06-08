@@ -2,7 +2,6 @@ import { getDb, type UserRow } from "./client";
 
 export type PublicUser = {
   id: string;
-  tenantId: string;
   email: string;
   fullName: string;
   phone: string;
@@ -21,7 +20,6 @@ export type PublicUser = {
 function rowToUser(r: UserRow): PublicUser {
   return {
     id: r.id,
-    tenantId: r.tenant_id,
     email: r.email,
     fullName: r.full_name,
     phone: r.phone,

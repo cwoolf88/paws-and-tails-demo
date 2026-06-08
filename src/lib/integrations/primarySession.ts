@@ -1,7 +1,8 @@
 export type PrimarySession = {
   signedIn: boolean;
   email: string | null;
-  linked: boolean;
+  connected: boolean;
+  merchantSettingsPath: string | null;
 };
 
 const PRIMARY_SESSION_MESSAGE = "next-address-primary-session";
@@ -17,8 +18,8 @@ const resultCache = new Map<string, CacheEntry>();
 let inFlight: Promise<PrimarySession> | null = null;
 let inFlightKey = "";
 
-function cacheKey(base: string, tenantId: string, externalUserId: string) {
-  return `${base}|${tenantId}|${externalUserId}|${window.location.origin}`;
+function cacheKey(base: string, connectExternalUserId: string) {
+  return `${base}|${connectExternalUserId}|${window.location.origin}`;
 }
 
 function readCache(key: string): PrimarySession | null {
@@ -42,8 +43,7 @@ export function invalidatePrimarySessionCache() {
 
 function probeOnce(
   primaryBaseUrl: string,
-  tenantId: string,
-  externalUserId: string,
+  connectExternalUserId: string,
 ): Promise<PrimarySession> {
   const base = primaryBaseUrl.replace(/\/$/, "");
   const origin = primaryOrigin(base);
@@ -52,8 +52,7 @@ function probeOnce(
   return new Promise((resolve) => {
     const params = new URLSearchParams({
       parent_origin: parentOrigin,
-      tenant_id: tenantId,
-      external_user_id: externalUserId,
+      external_user_id: connectExternalUserId,
     });
 
     const iframe = document.createElement("iframe");
@@ -63,7 +62,14 @@ function probeOnce(
     let settled = false;
     const timeout = window.setTimeout(finish, PROBE_TIMEOUT_MS);
 
-    function finish(result: PrimarySession = { signedIn: false, email: null, linked: false }) {
+    function finish(
+      result: PrimarySession = {
+        signedIn: false,
+        email: null,
+        connected: false,
+        merchantSettingsPath: null,
+      },
+    ) {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
@@ -79,12 +85,16 @@ function probeOnce(
         signedIn?: boolean;
         email?: string | null;
         linked?: boolean;
+        connected?: boolean;
+        merchantSettingsPath?: string | null;
       };
       if (data?.type !== PRIMARY_SESSION_MESSAGE) return;
       finish({
         signedIn: !!data.signedIn,
         email: data.email ?? null,
-        linked: !!data.linked,
+        connected: !!(data.connected ?? data.linked),
+        merchantSettingsPath:
+          typeof data.merchantSettingsPath === "string" ? data.merchantSettingsPath : null,
       });
     }
 
@@ -97,12 +107,11 @@ function probeOnce(
 /** Clerk session lives on the primary origin — probe via a tiny server-rendered iframe. */
 export function probePrimaryClerkSession(
   primaryBaseUrl: string,
-  tenantId: string,
-  externalUserId: string,
+  connectExternalUserId: string,
   options?: { force?: boolean },
 ): Promise<PrimarySession> {
   const base = primaryBaseUrl.replace(/\/$/, "");
-  const key = cacheKey(base, tenantId, externalUserId);
+  const key = cacheKey(base, connectExternalUserId);
 
   if (!options?.force) {
     const cached = readCache(key);
@@ -111,7 +120,7 @@ export function probePrimaryClerkSession(
   }
 
   inFlightKey = key;
-  inFlight = probeOnce(base, tenantId, externalUserId)
+  inFlight = probeOnce(base, connectExternalUserId)
     .then((result) => {
       writeCache(key, result);
       return result;

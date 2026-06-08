@@ -1,7 +1,20 @@
 import type { ContactUpdateRequest, ContactUpdateResponseBody } from "next-address-server-js";
 import { NextAddressError } from "next-address-server-js";
 import { isMockRotatingOutcomes } from "@/lib/config";
+import {
+  simulationEventsFromConsume,
+  type NetworkActivityExchange,
+  type SimulationEvent,
+} from "next-address-server-js/embed";
 import { getContactUpdatePath, getNextAddressClientOrNull } from "@/lib/integrations/primaryClient";
+import {
+  getContactUpdatePathForServer,
+  getNextAddressClientWithNetworkLog,
+} from "@/lib/integrations/serverNetworkLog";
+import {
+  consumeTenantSimulation,
+  tenantSimulationContactPushError,
+} from "@/lib/integrations/tenantSimulationArms";
 import type { PublicUser } from "@/lib/db/users";
 import { createHash } from "node:crypto";
 
@@ -31,16 +44,17 @@ function takeAddressPartials(
 function buildChangedPatches(
   before: PublicUser,
   after: PublicUser,
-  base: { tenantId: string; externalUserId: string },
+  base: { externalUserId: string },
 ): BuiltPatch[] {
   const patches: BuiltPatch[] = [];
 
   if (norm(before.fullName) !== norm(after.fullName)) {
+    const [firstName, ...rest] = norm(after.fullName).split(/\s+/);
     const body: ContactUpdateRequest = {
-      tenantId: base.tenantId,
       externalUserId: base.externalUserId,
       kind: "name",
-      name: { fullName: after.fullName },
+      firstName: firstName || undefined,
+      lastName: rest.length > 0 ? rest.join(" ") : undefined,
     };
     patches.push({
       body,
@@ -49,19 +63,17 @@ function buildChangedPatches(
   }
   if (norm(before.email) !== norm(after.email)) {
     const body: ContactUpdateRequest = {
-      tenantId: base.tenantId,
       externalUserId: base.externalUserId,
       kind: "email",
-      email: { address: after.email },
+      email: after.email,
     };
     patches.push({ body, idempotencyKey: `${base.externalUserId}-email-${hashId(body)}` });
   }
   if (norm(before.phone) !== norm(after.phone)) {
     const body: ContactUpdateRequest = {
-      tenantId: base.tenantId,
       externalUserId: base.externalUserId,
       kind: "phone",
-      phone: { raw: after.phone },
+      phone: after.phone,
     };
     patches.push({ body, idempotencyKey: `${base.externalUserId}-phone-${hashId(body)}` });
   }
@@ -83,7 +95,6 @@ function buildChangedPatches(
   if (changed.length > 0) {
     const p = takeAddressPartials(before.address, after.address, changed);
     const body: ContactUpdateRequest = {
-      tenantId: base.tenantId,
       externalUserId: base.externalUserId,
       kind: "address",
       address: p,
@@ -171,6 +182,7 @@ export function summarizePrimarySync(
 export async function pushContactUpdatesToPrimary(
   before: PublicUser,
   after: PublicUser,
+  options?: { networkActivity?: NetworkActivityExchange[] },
 ): Promise<{
   patches: ContactUpdateRequest[];
   results: PrimaryPatchResult[];
@@ -178,8 +190,10 @@ export async function pushContactUpdatesToPrimary(
   syncedToNextAddress: boolean;
   nextAddressHttp4xx: boolean;
   failureMessages: string[];
+  networkActivity: NetworkActivityExchange[];
+  simulationEvents: SimulationEvent[];
 }> {
-  const base = { tenantId: after.tenantId, externalUserId: after.id };
+  const base = { externalUserId: after.id };
   const toSend = buildChangedPatches(before, after, base);
   if (toSend.length === 0) {
     return {
@@ -189,25 +203,67 @@ export async function pushContactUpdatesToPrimary(
       syncedToNextAddress: false,
       nextAddressHttp4xx: false,
       failureMessages: [],
+      networkActivity: options?.networkActivity ?? [],
+      simulationEvents: [],
     };
   }
-  const client = getNextAddressClientOrNull();
-  const path = getContactUpdatePath();
-  const method = "PATCH" as const;
+
+  const networkActivity = options?.networkActivity ?? [];
+  const client =
+    options?.networkActivity != null
+      ? getNextAddressClientWithNetworkLog(networkActivity)
+      : getNextAddressClientOrNull();
+  const path =
+    options?.networkActivity != null ? getContactUpdatePathForServer() : getContactUpdatePath();
 
   const results: PrimaryPatchResult[] = [];
+  const tenantSim = consumeTenantSimulation(after.id, "contact_push");
+  if (tenantSim) {
+    try {
+      tenantSimulationContactPushError(tenantSim);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Simulated network error";
+      for (let i = 0; i < toSend.length; i += 1) {
+        results.push({
+          status: "rejected",
+          message,
+          error: message,
+        });
+      }
+      const summary = summarizePrimarySync(results, true);
+      return {
+        patches: toSend.map((x) => x.body),
+        results,
+        attemptedPrimary: true,
+        ...summary,
+        networkActivity,
+        simulationEvents: simulationEventsFromConsume(
+          tenantSim,
+          "contact_push",
+          message,
+        ),
+      };
+    }
+  }
+
   for (const p of toSend) {
     if (!client) {
       results.push({ ...mockResponse(p.idempotencyKey) });
       continue;
     }
     try {
-      const res = await client.submitContactUpdate(p.body, {
+      const res = await client.saveContactInfo(p.body, {
         path,
-        method,
         idempotencyKey: p.idempotencyKey,
       });
-      results.push(res);
+      if (res.status === "queued") {
+        results.push({
+          status: "pending_user_review",
+          message: res.message ?? "Queued for NextAddress sync",
+        });
+      } else {
+        results.push(res);
+      }
     } catch (e) {
       if (e instanceof NextAddressError && e.body && isContactUpdateResponseBody(e.body)) {
         results.push({
@@ -244,5 +300,7 @@ export async function pushContactUpdatesToPrimary(
     results,
     attemptedPrimary: true,
     ...summary,
+    networkActivity,
+    simulationEvents: [],
   };
 }

@@ -126,3 +126,54 @@ a.btn-primary:hover {
 .phone-input-field .PhoneInputInput:focus {
   outline: none;
 }
+
+/* Home hero — soft elliptical mask + edge blend into page background */
+.hero-cat__frame {
+  isolation: isolate;
+  background-color: var(--page);
+  -webkit-mask-image: radial-gradient(
+    ellipse 72% 68% at 50% 52%,
+    #000 0%,
+    #000 30%,
+    rgba(0, 0, 0, 0.92) 48%,
+    rgba(0, 0, 0, 0.55) 64%,
+    rgba(0, 0, 0, 0.15) 82%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 72% 68% at 50% 52%,
+    #000 0%,
+    #000 30%,
+    rgba(0, 0, 0, 0.92) 48%,
+    rgba(0, 0, 0, 0.55) 64%,
+    rgba(0, 0, 0, 0.15) 82%,
+    transparent 100%
+  );
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.hero-cat__photo {
+  transform: scale(1.05);
+}
+
+.hero-cat__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 72% 68% at 50% 52%,
+    transparent 24%,
+    color-mix(in srgb, var(--page) 45%, transparent) 46%,
+    color-mix(in srgb, var(--page) 85%, transparent) 66%,
+    var(--page) 86%
+  );
+  box-shadow:
+    inset 0 0 130px 80px color-mix(in srgb, var(--page) 78%, transparent),
+    inset 0 0 200px 120px color-mix(in srgb, var(--page) 35%, transparent);
+}
