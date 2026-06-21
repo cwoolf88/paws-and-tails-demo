@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getUserById } from "@/lib/db/users";
 import { logout } from "@/app/actions";
+import { SiteHeaderNav } from "@/components/SiteHeaderNav";
 
 export async function SiteHeader() {
   const c = await cookies();
@@ -19,22 +20,7 @@ export async function SiteHeader() {
           </span>
           Paws and Tails
         </Link>
-        <nav className="flex items-center gap-2 text-sm font-medium text-[var(--muted)]">
-          <Link
-            className="rounded-lg px-3 py-1.5 transition hover:bg-black/[0.04] hover:text-[var(--ink)]"
-            href="/shop"
-          >
-            Shop
-          </Link>
-          {u ? (
-            <Link
-              className="rounded-lg px-3 py-1.5 transition hover:bg-black/[0.04] hover:text-[var(--ink)]"
-              href="/account/contact"
-            >
-              Contact
-            </Link>
-          ) : null}
-        </nav>
+        <SiteHeaderNav signedIn={!!u} />
         <div className="flex items-center gap-2 text-sm">
           {u ? (
             <span className="hidden min-w-0 sm:inline text-[var(--muted)]">

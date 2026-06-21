@@ -1,4 +1,8 @@
-import type { ContactUpdateRequest, ContactUpdateResponseBody } from "next-address-server-js";
+import type {
+  AddressPayload,
+  ContactUpdateRequest,
+  ContactUpdateResponseBody,
+} from "next-address-server-js";
 import { NextAddressError } from "next-address-server-js";
 import { isMockRotatingOutcomes } from "@/lib/config";
 import {
@@ -22,22 +26,10 @@ const norm = (s: string) => s.trim();
 
 type BuiltPatch = { body: ContactUpdateRequest; idempotencyKey: string };
 
-function takeAddressPartials(
-  _before: PublicUser["address"],
-  after: PublicUser["address"],
-  changedKeys: (keyof PublicUser["address"])[],
-) {
-  const p: Record<string, string> = {};
-  for (const k of changedKeys) p[k] = (after as Record<string, string>)[k] ?? "";
-  if (Object.keys(p).length > 0) p.label = "default";
-  return p as {
-    line1?: string;
-    line2?: string;
-    city?: string;
-    region?: string;
-    postalCode?: string;
-    countryCode?: string;
-    label?: string;
+function addressPayload(address: PublicUser["address"]): AddressPayload {
+  return {
+    ...address,
+    label: "default",
   };
 }
 
@@ -60,14 +52,6 @@ function buildChangedPatches(
       body,
       idempotencyKey: `${base.externalUserId}-name-${hashId(body)}`,
     });
-  }
-  if (norm(before.email) !== norm(after.email)) {
-    const body: ContactUpdateRequest = {
-      externalUserId: base.externalUserId,
-      kind: "email",
-      email: after.email,
-    };
-    patches.push({ body, idempotencyKey: `${base.externalUserId}-email-${hashId(body)}` });
   }
   if (norm(before.phone) !== norm(after.phone)) {
     const body: ContactUpdateRequest = {
@@ -93,11 +77,11 @@ function buildChangedPatches(
     }
   }
   if (changed.length > 0) {
-    const p = takeAddressPartials(before.address, after.address, changed);
     const body: ContactUpdateRequest = {
       externalUserId: base.externalUserId,
       kind: "address",
-      address: p,
+      address: addressPayload(after.address),
+      previousAddress: addressPayload(before.address),
     };
     patches.push({ body, idempotencyKey: `${base.externalUserId}-addr-${hashId(body)}` });
   }
@@ -150,6 +134,28 @@ function isPrimarySyncSuccess(r: PrimaryPatchResult): boolean {
 
 function isPrimaryHttp4xx(status: number | undefined): boolean {
   return status !== undefined && status >= 400 && status < 500;
+}
+
+/** Primary returns this when the tenant user is not connected on NextAddress yet. */
+function isUnknownUserMappingResult(r: PrimaryPatchResult): boolean {
+  return r.httpStatus === 404 && r.message === "Unknown user mapping";
+}
+
+function skippedPrimarySyncResult(
+  toSend: BuiltPatch[],
+  networkActivity: NetworkActivityExchange[],
+  simulationEvents: SimulationEvent[] = [],
+) {
+  return {
+    patches: toSend.map((x) => x.body),
+    results: [] as PrimaryPatchResult[],
+    attemptedPrimary: false,
+    syncedToNextAddress: false,
+    nextAddressHttp4xx: false,
+    failureMessages: [] as string[],
+    networkActivity,
+    simulationEvents,
+  };
 }
 
 export function summarizePrimarySync(
@@ -266,11 +272,15 @@ export async function pushContactUpdatesToPrimary(
       }
     } catch (e) {
       if (e instanceof NextAddressError && e.body && isContactUpdateResponseBody(e.body)) {
-        results.push({
+        const patchResult: PrimaryPatchResult = {
           ...e.body,
           httpStatus: e.status,
           error: isPrimaryHttp4xx(e.status) ? e.message : undefined,
-        });
+        };
+        if (isUnknownUserMappingResult(patchResult)) {
+          return skippedPrimarySyncResult(toSend, networkActivity);
+        }
+        results.push(patchResult);
         continue;
       }
       if (e instanceof NextAddressError) {
@@ -295,6 +305,12 @@ export async function pushContactUpdatesToPrimary(
     }
   }
   const summary = summarizePrimarySync(results, true);
+  if (
+    results.length > 0 &&
+    results.every(isUnknownUserMappingResult)
+  ) {
+    return skippedPrimarySyncResult(toSend, networkActivity);
+  }
   return {
     patches: toSend.map((x) => x.body),
     results,

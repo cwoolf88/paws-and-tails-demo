@@ -1,9 +1,22 @@
 "use client";
 
-import { sessionPollRefreshLabel } from "next-address-server-js/embed";
+import {
+  contactSyncStateFromPrimaryBatch,
+  injectWidgetStyles,
+  renderSyncBlock,
+  sessionPollRefreshLabel,
+} from "next-address-server-js/embed";
 import { useNextAddressConnection } from "@/lib/integrations/useNextAddressConnection";
+import { useEffect, useRef } from "react";
+import type { ContactPrimaryResult } from "./types";
 
 const APP_NAME = "Paws and Tails";
+
+type Props = {
+  primary: ContactPrimaryResult | null;
+  saving: boolean;
+  onSaveContact: () => Promise<ContactPrimaryResult | null>;
+};
 
 function connectionSubtitle(
   connected: boolean,
@@ -148,7 +161,7 @@ function ConnectionLoadingSkeleton() {
   );
 }
 
-export function CustomNextAddressContactUI() {
+export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: Props) {
   const {
     info,
     connected,
@@ -157,13 +170,50 @@ export function CustomNextAddressContactUI() {
     loading,
     statusLoading,
     err,
+    syncState,
+    syncBusy,
     sessionPoll,
     isSessionPollRefreshVisible,
     retryConnectSession,
     goToConnectAccount,
     goToDisconnect,
     goToSettings,
-  } = useNextAddressConnection();
+    setSyncState,
+    bindSyncRetry,
+    sync,
+  } = useNextAddressConnection({ enableSync: true });
+  const syncMountRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    injectWidgetStyles();
+  }, []);
+
+  useEffect(() => {
+    bindSyncRetry(async () => {
+      await onSaveContact();
+    });
+  }, [bindSyncRetry, onSaveContact]);
+
+  useEffect(() => {
+    if (saving) {
+      setSyncState({ status: "syncing" });
+      return;
+    }
+    if (!primary) {
+      setSyncState({ status: "idle" });
+      return;
+    }
+    setSyncState(contactSyncStateFromPrimaryBatch(primary.results, primary.attemptedPrimary));
+  }, [primary, saving, setSyncState]);
+
+  useEffect(() => {
+    const mount = syncMountRef.current;
+    if (!mount) return;
+    renderSyncBlock(mount, syncState, {
+      onRetry: () => void sync(),
+      retryDisabled: syncBusy || saving,
+    });
+  }, [syncState, syncBusy, saving, sync]);
 
   if (loading) {
     return <ConnectionLoadingSkeleton />;
@@ -276,6 +326,15 @@ export function CustomNextAddressContactUI() {
           />
         ) : null}
       </div>
+
+      <div ref={syncMountRef} className="na-widget-host" />
+
+      {primary?.savedLocally && primary.attemptedPrimary && !primary.syncedToNextAddress ? (
+        <p className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--page)] px-3 py-2 text-xs text-[var(--muted)]">
+          Your edits were saved in Paws and Tails. See sync status above for NextAddress error
+          details or try again.
+        </p>
+      ) : null}
     </section>
   );
 }

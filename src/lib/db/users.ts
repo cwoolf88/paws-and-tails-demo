@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { getDb, type UserRow } from "./client";
+import { getNextAddressClientOrNull } from "@/lib/integrations/primaryClient";
 
 export type PublicUser = {
   id: string;
@@ -52,9 +54,74 @@ export function getUserById(id: string) {
   return row ? rowToUser(row) : null;
 }
 
+export function getUserByEmail(email: string) {
+  const row = getUserRowByEmail(email);
+  return row ? rowToUser(row) : null;
+}
+
+function getUserRowByEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+  const database = getDb();
+  const row = database.prepare("SELECT * FROM users WHERE lower(email) = ? LIMIT 1").get(normalized) as
+    | UserRow
+    | undefined;
+  return row ?? null;
+}
+
+export type CreateUserInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+};
+
+export function createUser(input: CreateUserInput) {
+  const database = getDb();
+  const now = new Date().toISOString();
+  const id = randomUUID();
+  const fullName = `${input.firstName} ${input.lastName}`.trim();
+  const email = input.email.trim();
+
+  database
+    .prepare(
+      `INSERT INTO users (
+        id, email, full_name, password_hash, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at
+      ) VALUES (
+        @id, @email, @fullName, '', '', '', '', '', '', '', 'US', @now, @now
+      )`,
+    )
+    .run({
+      id,
+      email,
+      fullName,
+      now,
+    });
+
+  const created = getUserById(id);
+  if (!created) throw new Error("Failed to create user");
+  return created;
+}
+
+export async function deleteUserById(id: string) {
+  const user = getUserById(id);
+  if (!user) return null;
+
+  const client = getNextAddressClientOrNull();
+  if (client) {
+    try {
+      await client.markTenantExternalUserDeleted({ externalUserId: id });
+    } catch {
+      // Demo delete still proceeds if primary is unavailable.
+    }
+  }
+
+  const database = getDb();
+  database.prepare("DELETE FROM users WHERE id = ?").run(id);
+  return user;
+}
+
 export type UpdateUserInput = {
   fullName: string;
-  email: string;
   phone: string;
   line1: string;
   line2: string;
@@ -71,7 +138,6 @@ export function updateUserById(id: string, data: UpdateUserInput) {
     .prepare(
       `UPDATE users SET
         full_name = @fullName,
-        email = @email,
         phone = @phone,
         line1 = @line1,
         line2 = @line2,

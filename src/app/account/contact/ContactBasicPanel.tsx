@@ -92,8 +92,8 @@ export function ContactBasicPanel({
       <div ref={mountRef} />
       {primary?.savedLocally && primary.attemptedPrimary && !primary.syncedToNextAddress ? (
         <p className="rounded-xl border border-[var(--border)] bg-[var(--page)] px-3 py-2 text-xs text-[var(--muted)]">
-          Your edits were saved in Paws and Tails. Use the sync widget above for NextAddress
-          error details or try again.
+          Your edits were saved in Paws and Tails. See sync status in the NextAddress widget above
+          for error details or try again.
         </p>
       ) : null}
       <ContactFormFields

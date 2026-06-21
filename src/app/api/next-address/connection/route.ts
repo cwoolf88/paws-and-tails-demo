@@ -94,7 +94,12 @@ export async function GET() {
 
   const connectUrl =
     primaryBaseUrl && connectExternalUserId
-      ? buildPrimaryConnectUrlFromToken(primaryBaseUrl, connectExternalUserId, returnUrl)
+      ? buildPrimaryConnectUrlFromToken(
+          primaryBaseUrl,
+          connectExternalUserId,
+          returnUrl,
+          user.email,
+        )
       : null;
   const disconnectUrl =
     primaryBaseUrl && connectExternalUserId
@@ -102,7 +107,12 @@ export async function GET() {
       : null;
   const connectSignInUrl =
     primaryBaseUrl && connectExternalUserId
-      ? buildPrimaryConnectSignInUrlFromToken(primaryBaseUrl, connectExternalUserId, returnUrl)
+      ? buildPrimaryConnectSignInUrlFromToken(
+          primaryBaseUrl,
+          connectExternalUserId,
+          returnUrl,
+          user.email,
+        )
       : null;
   const disconnectSignInUrl =
     primaryBaseUrl && connectExternalUserId
@@ -112,6 +122,7 @@ export async function GET() {
   return NextResponse.json({
     networkActivity,
     externalUserId,
+    tenantUserEmail: user.email,
     connectExternalUserId: connectExternalUserId ?? externalUserId,
     linkExternalUserId: connectExternalUserId,
     returnUrl: pageReturnUrl,

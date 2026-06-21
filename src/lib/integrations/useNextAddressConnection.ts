@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { runNextAddressBridge } from "@/lib/integrations/primaryBridgePopup";
 import {
   createNextAddressIntegration,
+  type ContactSyncDisplayState,
   type IntegrationSimulationScenario,
   type NextAddressIntegrationHandle,
   type NextAddressIntegrationState,
@@ -17,6 +18,7 @@ const initialState: NextAddressIntegrationState = {
     error: null,
     info: null,
     connected: false,
+    autoConnected: false,
     signedIntoPrimary: false,
     primaryEmail: null,
     merchantSettingsPath: null,
@@ -29,8 +31,13 @@ const initialState: NextAddressIntegrationState = {
   addressChangeHold: null,
 };
 
-export function useNextAddressConnection() {
+type Options = {
+  enableSync?: boolean;
+};
+
+export function useNextAddressConnection(options: Options = {}) {
   const integrationRef = useRef<NextAddressIntegrationHandle | null>(null);
+  const syncRetryRef = useRef<(() => Promise<void> | void) | null>(null);
   const [state, setState] = useState<NextAddressIntegrationState>(initialState);
 
   useEffect(() => {
@@ -44,6 +51,14 @@ export function useNextAddressConnection() {
           await onComplete?.();
         });
       },
+      sync: options.enableSync
+        ? {
+            initialState: { status: "idle" },
+            onRetry: async () => {
+              await syncRetryRef.current?.();
+            },
+          }
+        : undefined,
       onChange: setState,
     });
     integrationRef.current = integration;
@@ -52,7 +67,17 @@ export function useNextAddressConnection() {
       integration.destroy();
       integrationRef.current = null;
     };
+  }, [options.enableSync]);
+
+  const setSyncState = useCallback((next: ContactSyncDisplayState) => {
+    integrationRef.current?.setSyncState(next);
   }, []);
+
+  const bindSyncRetry = useCallback((handler: (() => Promise<void> | void) | null) => {
+    syncRetryRef.current = handler;
+  }, []);
+
+  const runSync = useCallback(() => integrationRef.current?.sync(), []);
 
   const { connection, sync, syncBusy, sessionPoll } = state;
 
@@ -84,10 +109,11 @@ export function useNextAddressConnection() {
     canDisconnect: () => integrationRef.current?.canDisconnect() ?? false,
     canOpenSettings: () => integrationRef.current?.canOpenSettings() ?? false,
     getSettingsUrl: () => integrationRef.current?.getSettingsUrl() ?? null,
-    setSyncState: (next: typeof sync) => integrationRef.current?.setSyncState(next),
+    setSyncState,
+    bindSyncRetry,
     reportSyncResult: (result: Parameters<NextAddressIntegrationHandle["reportSyncResult"]>[0]) =>
       integrationRef.current?.reportSyncResult(result),
     reportSyncError: (error: unknown) => integrationRef.current?.reportSyncError(error),
-    sync: () => integrationRef.current?.sync(),
+    sync: runSync,
   };
 }

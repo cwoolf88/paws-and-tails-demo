@@ -1,22 +1,41 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import {
-  DEMO_USER_LISA_ID,
-  DEMO_USER_WHISKERS_ID,
-  LEGACY_DEMO_USER_IDS,
-} from "./demo-user-ids";
 
 const DB_PATH = path.join(process.cwd(), "data", "paws-tails.db");
 
 let dbInstance: Database.Database | null = null;
 
-function migrate(database: Database.Database) {
+const EXPECTED_USER_COLUMNS = [
+  "id",
+  "email",
+  "full_name",
+  "password_hash",
+  "phone",
+  "line1",
+  "line2",
+  "city",
+  "region",
+  "postal_code",
+  "country_code",
+  "created_at",
+  "updated_at",
+] as const;
+
+function usersTableSchemaOk(database: Database.Database) {
+  const cols = database.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (cols.length === 0) return false;
+  const names = new Set(cols.map((c) => c.name));
+  return EXPECTED_USER_COLUMNS.every((name) => names.has(name)) && names.size === EXPECTED_USER_COLUMNS.length;
+}
+
+function createUsersTable(database: Database.Database) {
   database.exec(`
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE users (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL,
       full_name TEXT NOT NULL,
+      password_hash TEXT NOT NULL DEFAULT '',
       phone TEXT NOT NULL DEFAULT '',
       line1 TEXT NOT NULL DEFAULT '',
       line2 TEXT NOT NULL DEFAULT '',
@@ -30,60 +49,28 @@ function migrate(database: Database.Database) {
   `);
 }
 
-function migrateLegacyUserIds(database: Database.Database) {
-  const update = database.prepare("UPDATE users SET id = @to WHERE id = @from");
-  for (const [from, to] of Object.entries(LEGACY_DEMO_USER_IDS)) {
-    update.run({ from, to });
-  }
-}
+function migrate(database: Database.Database) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      full_name TEXT NOT NULL,
+      password_hash TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      line1 TEXT NOT NULL DEFAULT '',
+      line2 TEXT NOT NULL DEFAULT '',
+      city TEXT NOT NULL DEFAULT '',
+      region TEXT NOT NULL DEFAULT '',
+      postal_code TEXT NOT NULL DEFAULT '',
+      country_code TEXT NOT NULL DEFAULT 'US',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
 
-function seedIfEmpty(database: Database.Database) {
-  const n = database.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number };
-  if (n.c > 0) return;
-  const now = new Date().toISOString();
-  const ins = database.prepare(
-    `INSERT INTO users (id, email, full_name, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at)
-     VALUES (@id, @email, @full_name, @phone, @line1, @line2, @city, @region, @postal_code, @country_code, @created_at, @updated_at)`,
-  );
-  const rows = [
-    {
-      id: DEMO_USER_WHISKERS_ID,
-      email: "whiskers@example.com",
-      full_name: "Whiskers Wellington",
-      phone: "+15550001111",
-      line1: "42 Scratching Post Lane",
-      line2: "Apt. 2P",
-      city: "Austin",
-      region: "TX",
-      postal_code: "78701",
-    },
-    {
-      id: DEMO_USER_LISA_ID,
-      email: "bark@example.com",
-      full_name: "Bark Paulsen",
-      phone: "+15550002222",
-      line1: "7 Tail Wag Court",
-      line2: "",
-      city: "Portland",
-      region: "OR",
-      postal_code: "97201",
-    },
-  ];
-  for (const r of rows) {
-    ins.run({
-      id: r.id,
-      email: r.email,
-      full_name: r.full_name,
-      phone: r.phone,
-      line1: r.line1,
-      line2: r.line2,
-      city: r.city,
-      region: r.region,
-      postal_code: r.postal_code,
-      country_code: "US",
-      created_at: now,
-      updated_at: now,
-    });
+  if (!usersTableSchemaOk(database)) {
+    database.exec(`DROP TABLE IF EXISTS users`);
+    createUsersTable(database);
   }
 }
 
@@ -93,8 +80,6 @@ export function getDb() {
   const database = new Database(DB_PATH);
   database.pragma("journal_mode = WAL");
   migrate(database);
-  migrateLegacyUserIds(database);
-  seedIfEmpty(database);
   dbInstance = database;
   return database;
 }
@@ -103,6 +88,7 @@ export type UserRow = {
   id: string;
   email: string;
   full_name: string;
+  password_hash: string;
   phone: string;
   line1: string;
   line2: string;

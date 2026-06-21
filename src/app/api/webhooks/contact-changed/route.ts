@@ -1,7 +1,14 @@
-import { parseContactWebhookPayload, verifyWebhookSignature } from "next-address-server-js";
+import {
+  parseWebhookEvent,
+  verifyWebhookSignature,
+  WebhookVerificationError,
+} from "next-address-server-js";
 import { NextResponse } from "next/server";
 import { getWebhookSecret } from "@/lib/config";
-import { applyContactChangeFromPrimary } from "@/lib/integrations/applyContactWebhookEvent";
+import {
+  applyContactChangeFromPrimary,
+  applyContactReviewFromPrimary,
+} from "@/lib/integrations/applyContactWebhookEvent";
 
 export const runtime = "nodejs";
 
@@ -28,22 +35,53 @@ export async function POST(request: Request) {
   } catch {
     return new NextResponse("Invalid webhook", { status: 401 });
   }
-  const event = parseContactWebhookPayload(raw);
-  const full = JSON.parse(raw) as {
-    name?: { fullName?: string; firstName?: string; lastName?: string };
-    phone?: { e164?: string; raw?: string };
-    email?: { address?: string };
-  };
-  const r = applyContactChangeFromPrimary(event, {
-    name: full.name,
-    phone: full.phone,
-    email: full.email,
-  });
-  if (!r.ok) {
-    return NextResponse.json(
-      { ok: false, reason: r.reason, event },
-      { status: 422 },
-    );
+
+  let event;
+  try {
+    event = parseWebhookEvent(raw);
+  } catch (e) {
+    const message = e instanceof WebhookVerificationError ? e.message : "Invalid webhook payload";
+    return NextResponse.json({ ok: false, error: message }, { status: 422 });
   }
-  return NextResponse.json({ ok: true, user: r.user, event });
+
+  if (event.event === "contact.update.reviewed") {
+    const r = applyContactReviewFromPrimary(event);
+    if (!r.ok) {
+      return NextResponse.json(
+        { ok: false, reason: r.reason, event },
+        { status: 422 },
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      user: r.user,
+      applied: r.applied,
+      event,
+    });
+  }
+
+  if (event.event === "contact.changed") {
+    const full = JSON.parse(raw) as {
+      name?: { fullName?: string; firstName?: string; lastName?: string };
+      phone?: { e164?: string; raw?: string };
+      email?: { address?: string };
+    };
+    const r = applyContactChangeFromPrimary(event, {
+      name: full.name,
+      phone: full.phone,
+      email: full.email,
+    });
+    if (!r.ok) {
+      return NextResponse.json(
+        { ok: false, reason: r.reason, event },
+        { status: 422 },
+      );
+    }
+    return NextResponse.json({ ok: true, user: r.user, event });
+  }
+
+  return NextResponse.json(
+    { ok: false, error: `Unsupported event: ${event.event}` },
+    { status: 422 },
+  );
 }

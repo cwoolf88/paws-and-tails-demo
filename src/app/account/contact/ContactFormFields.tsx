@@ -56,10 +56,14 @@ export function ContactFormFields({ values, onChange, err, saving, onSubmit }: P
           id="contact-email"
           type="email"
           autoComplete="email"
-          className="mt-1.5 w-full rounded-xl border border-[var(--border)] px-3 py-2.5 text-sm"
+          readOnly
+          aria-readonly="true"
+          className="mt-1.5 w-full cursor-not-allowed rounded-xl border border-[var(--border)] bg-[var(--page)] px-3 py-2.5 text-sm text-[var(--muted)]"
           value={values.email}
-          onChange={(e) => setField("email", e.target.value)}
         />
+        <p className="mt-1.5 text-xs text-[var(--muted)]">
+          Email is set when the demo account is created and is used to match this user with NextAddress.
+        </p>
       </div>
       <PhoneNumberField
         id="contact-phone"

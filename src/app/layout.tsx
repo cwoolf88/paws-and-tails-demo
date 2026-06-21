@@ -3,6 +3,7 @@ import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PawsFooter } from "@/components/PawsFooter";
+import { NextAddressDevToolsBootstrap } from "@/components/NextAddressDevToolsBootstrap";
 
 const body = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
           <SiteHeader />
           <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-5">{children}</main>
           <PawsFooter />
+          <NextAddressDevToolsBootstrap />
         </div>
       </body>
     </html>

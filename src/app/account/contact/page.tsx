@@ -4,9 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ContactBasicPanel } from "./ContactBasicPanel";
 import { ContactCustomPanel } from "./ContactCustomPanel";
 import { ContactIntegrationTabs } from "./ContactIntegrationTabs";
-import { ContactNetworkActivityPanel } from "./ContactNetworkActivityPanel";
-import { ContactSimulationPanel } from "./ContactSimulationPanel";
-import { isSimulationWidgetEnabled } from "@/lib/config";
 import { integrationLoggedFetch } from "@/lib/integrations/integrationLoggedFetch";
 import { getIntegrationSimulationLog } from "@/lib/integrations/integrationSimulationLog";
 import { readSimulationEventsField } from "next-address-server-js/embed";
@@ -82,7 +79,10 @@ export default function ContactPage() {
     const r = await integrationLoggedFetch("Save contact + sync", "/api/user/contact", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        previousAddress: user.address,
+      }),
     });
     if (!r.ok) {
       const j = (await r.json().catch(() => ({}))) as { error?: string };
@@ -137,13 +137,6 @@ export default function ContactPage() {
       <p className="text-xs text-[var(--muted)]">
         Signed-in user id: <span className="font-mono">{user.id}</span>
       </p>
-
-      {isSimulationWidgetEnabled() ? (
-        <div className="space-y-4">
-          <ContactSimulationPanel />
-          <ContactNetworkActivityPanel />
-        </div>
-      ) : null}
 
       <ContactIntegrationTabs active={tab} onChange={setTab} />
 

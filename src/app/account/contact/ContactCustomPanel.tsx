@@ -1,5 +1,4 @@
 import { ContactFormFields } from "./ContactFormFields";
-import { ContactCustomSyncFeedback } from "./ContactCustomSyncFeedback";
 import { CustomNextAddressContactUI } from "./CustomNextAddressContactUI";
 import type { ContactFormValues, ContactPrimaryResult } from "./types";
 
@@ -29,11 +28,10 @@ export function ContactCustomPanel({
       aria-labelledby="contact-tab-custom"
       className="space-y-4"
     >
-      <CustomNextAddressContactUI />
-      <ContactCustomSyncFeedback
+      <CustomNextAddressContactUI
         primary={primary}
         saving={saving}
-        onRetry={onSaveContact}
+        onSaveContact={onSaveContact}
       />
       <ContactFormFields
         values={form}
@@ -43,15 +41,15 @@ export function ContactCustomPanel({
         onSubmit={onSubmit}
       />
       <p className="text-xs text-[var(--muted)]">
-        Connection UI is hand-rolled in this demo; sync feedback uses{" "}
+        Connection UI is hand-rolled in this demo; sync status uses the same in-widget block as{" "}
         <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">
-          NextAddressSyncCard
+          createNextAddressWidget
         </code>{" "}
-        and{" "}
+        via{" "}
         <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">
-          contactSyncStateFromPrimaryBatch
+          renderSyncBlock
         </code>{" "}
-        from <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">next-address-server-js</code>.
+        from <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">next-address-server-js/embed</code>.
       </p>
     </div>
   );

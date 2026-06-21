@@ -4,11 +4,14 @@ import { getApiKeyPrefix } from "@/lib/integrations/nextAddressLinkToken";
 export function buildPrimaryConnectPath(
   linkExternalUserId: string,
   returnUrl: string,
+  tenantUserEmail?: string,
 ): string {
   const params = new URLSearchParams({
     external_user_id: linkExternalUserId,
     return_url: returnUrl,
   });
+  const email = tenantUserEmail?.trim();
+  if (email) params.set("tenant_user_email", email);
   return `/connect?${params.toString()}`;
 }
 
@@ -26,9 +29,10 @@ export function buildPrimaryDisconnectPath(
 export function buildPrimaryConnectSignInPath(
   linkExternalUserId: string,
   returnUrl: string,
+  tenantUserEmail?: string,
 ): string {
   return `/sign-in?redirect_url=${encodeURIComponent(
-    buildPrimaryConnectPath(linkExternalUserId, returnUrl),
+    buildPrimaryConnectPath(linkExternalUserId, returnUrl, tenantUserEmail),
   )}`;
 }
 
@@ -45,9 +49,10 @@ export function buildPrimaryConnectUrlFromToken(
   primaryBaseUrl: string,
   linkExternalUserId: string,
   returnUrl: string,
+  tenantUserEmail?: string,
 ): string {
   const base = primaryBaseUrl.replace(/\/$/, "");
-  return `${base}${buildPrimaryConnectPath(linkExternalUserId, returnUrl)}`;
+  return `${base}${buildPrimaryConnectPath(linkExternalUserId, returnUrl, tenantUserEmail)}`;
 }
 
 export function buildPrimaryDisconnectUrlFromToken(
@@ -63,9 +68,10 @@ export function buildPrimaryConnectSignInUrlFromToken(
   primaryBaseUrl: string,
   linkExternalUserId: string,
   returnUrl: string,
+  tenantUserEmail?: string,
 ): string {
   const base = primaryBaseUrl.replace(/\/$/, "");
-  return `${base}${buildPrimaryConnectSignInPath(linkExternalUserId, returnUrl)}`;
+  return `${base}${buildPrimaryConnectSignInPath(linkExternalUserId, returnUrl, tenantUserEmail)}`;
 }
 
 export function buildPrimaryDisconnectSignInUrlFromToken(
@@ -82,13 +88,14 @@ export function buildPrimaryConnectSignInUrl(
   userId: string,
   signingSecret: string,
   returnUrl: string,
+  tenantUserEmail?: string,
 ): string {
   const base = primaryBaseUrl.replace(/\/$/, "");
   const linkExternalUserId = encodeExternalUserId(
     { apiKeyPrefix: getApiKeyPrefix(), userId },
     signingSecret,
   );
-  return `${base}${buildPrimaryConnectSignInPath(linkExternalUserId, returnUrl)}`;
+  return `${base}${buildPrimaryConnectSignInPath(linkExternalUserId, returnUrl, tenantUserEmail)}`;
 }
 
 export function buildPrimaryDisconnectSignInUrl(
@@ -110,13 +117,14 @@ export function buildPrimaryConnectUrl(
   userId: string,
   signingSecret: string,
   returnUrl: string,
+  tenantUserEmail?: string,
 ): string {
   const base = primaryBaseUrl.replace(/\/$/, "");
   const linkExternalUserId = encodeExternalUserId(
     { apiKeyPrefix: getApiKeyPrefix(), userId },
     signingSecret,
   );
-  return `${base}${buildPrimaryConnectPath(linkExternalUserId, returnUrl)}`;
+  return `${base}${buildPrimaryConnectPath(linkExternalUserId, returnUrl, tenantUserEmail)}`;
 }
 
 export function buildPrimaryDisconnectUrl(

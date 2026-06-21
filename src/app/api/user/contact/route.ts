@@ -25,7 +25,6 @@ export async function PUT(request: Request) {
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   const next: UpdateUserInput = {
     fullName: (body.fullName ?? before.fullName).trim() || before.fullName,
-    email: (body.email ?? before.email).trim() || before.email,
     phone: (body.phone ?? before.phone).trim() || before.phone,
     line1: (body.line1 ?? before.address.line1).trim() || before.address.line1,
     line2: (body.line2 ?? before.address.line2).trim() || before.address.line2,
