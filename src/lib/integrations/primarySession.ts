@@ -1,3 +1,5 @@
+import { PLATFORM_NAME } from "@/lib/config";
+
 export type PrimarySession = {
   signedIn: boolean;
   email: string | null;
@@ -5,7 +7,7 @@ export type PrimarySession = {
   merchantSettingsPath: string | null;
 };
 
-const PRIMARY_SESSION_MESSAGE = "next-address-primary-session";
+const PRIMARY_SESSION_MESSAGE = "anemone-session";
 const PROBE_TIMEOUT_MS = 8_000;
 const CACHE_TTL_MS = 30_000;
 
@@ -57,7 +59,7 @@ function probeOnce(
 
     const iframe = document.createElement("iframe");
     iframe.hidden = true;
-    iframe.title = "NextAddress session check";
+    iframe.title = `${PLATFORM_NAME} session check`;
 
     let settled = false;
     const timeout = window.setTimeout(finish, PROBE_TIMEOUT_MS);

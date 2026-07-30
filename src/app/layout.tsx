@@ -3,7 +3,7 @@ import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PawsFooter } from "@/components/PawsFooter";
-import { NextAddressDevToolsBootstrap } from "@/components/NextAddressDevToolsBootstrap";
+import { AnemoneDevToolsBootstrap } from "@/components/AnemoneDevToolsBootstrap";
 
 const body = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -19,7 +19,7 @@ const display = Fraunces({
 
 export const metadata: Metadata = {
   title: "Paws and Tails — Paws-words, delivered with purr-ision",
-  description: "A whimsical subscription service demo with real contact sync via next-address-server-js.",
+  description: "A whimsical subscription service demo with real contact sync via anemone-server-js.",
 };
 
 export default function RootLayout({
@@ -34,7 +34,7 @@ export default function RootLayout({
           <SiteHeader />
           <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-5">{children}</main>
           <PawsFooter />
-          <NextAddressDevToolsBootstrap />
+          <AnemoneDevToolsBootstrap />
         </div>
       </body>
     </html>

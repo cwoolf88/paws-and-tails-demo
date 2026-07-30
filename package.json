@@ -16,7 +16,7 @@
   "dependencies": {
     "better-sqlite3": "^12.9.0",
     "next": "15.5.15",
-    "next-address-server-js": "file:../next-address-server-js",
+    "anemone-server-js": "file:../anemone-server-js",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-phone-number-input": "^3.4.17",

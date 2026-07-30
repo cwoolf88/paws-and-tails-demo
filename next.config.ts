@@ -5,14 +5,16 @@ import { fileURLToPath } from "node:url";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
-/** Default sibling checkout; override with env when the SDK is not in ../next-address-server-js. */
+/** Default sibling checkout; override with env when the SDK is not in ../anemone-server-js. */
 function localSdkPath(): string | null {
-  const fromEnv = process.env.LOCAL_NEXT_ADDRESS_SERVER_JS?.trim();
+  const fromEnv =
+    process.env.LOCAL_ANEMONE_SERVER_JS?.trim() ||
+    process.env.LOCAL_ANEMONE_SERVER_JS?.trim();
   const p = fromEnv
     ? path.isAbsolute(fromEnv)
       ? fromEnv
       : path.resolve(appDir, fromEnv)
-    : path.resolve(appDir, "..", "next-address-server-js");
+    : path.resolve(appDir, "..", "anemone-server-js");
   if (!fs.existsSync(path.join(p, "package.json"))) return null;
   return p;
 }
@@ -37,7 +39,7 @@ function turbopackForLocalSdk(
     const rel = path.relative(root, sdkResolved);
     const forward = rel.split(path.sep).join("/");
     if (forward && !rel.startsWith("..") && !path.isAbsolute(rel)) {
-      return { root, resolveAlias: { "next-address-server-js": forward } };
+      return { root, resolveAlias: { "anemone-server-js": forward } };
     }
     const up = path.dirname(root);
     if (up === root) break;
@@ -50,7 +52,7 @@ const sdkTurbopack = sdk ? turbopackForLocalSdk(appDir, sdk) : null;
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
-  transpilePackages: ["next-address-server-js"],
+  transpilePackages: ["anemone-server-js"],
   ...(sdkTurbopack
     ? {
         turbopack: {

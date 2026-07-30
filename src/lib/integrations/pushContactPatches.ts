@@ -2,18 +2,18 @@ import type {
   AddressPayload,
   ContactUpdateRequest,
   ContactUpdateResponseBody,
-} from "next-address-server-js";
-import { NextAddressError } from "next-address-server-js";
-import { isMockRotatingOutcomes } from "@/lib/config";
+} from "anemone-server-js";
+import { AnemoneError } from "anemone-server-js";
+import { isMockRotatingOutcomes, PLATFORM_NAME } from "@/lib/config";
 import {
   simulationEventsFromConsume,
   type NetworkActivityExchange,
   type SimulationEvent,
-} from "next-address-server-js/embed";
-import { getContactUpdatePath, getNextAddressClientOrNull } from "@/lib/integrations/primaryClient";
+} from "anemone-server-js/embed";
+import { getContactUpdatePath, getAnemoneClientOrNull } from "@/lib/integrations/primaryClient";
 import {
   getContactUpdatePathForServer,
-  getNextAddressClientWithNetworkLog,
+  getAnemoneClientWithNetworkLog,
 } from "@/lib/integrations/serverNetworkLog";
 import {
   consumeTenantSimulation,
@@ -110,7 +110,7 @@ function mockResponse(idempotencyKey: string): ContactUpdateResponseBody {
   return {
     status: "rejected",
     message:
-      "No linked profile for this user on NextAddress (rotating mock outcome; tweak a field or turn off NEXT_ADDRESS_MOCK_ROTATE_OUTCOMES).",
+      `No linked profile for this user on ${PLATFORM_NAME} (rotating mock outcome; tweak a field or turn off ANEMONE_MOCK_ROTATE_OUTCOMES).`,
   };
 }
 
@@ -124,7 +124,7 @@ function isContactUpdateResponseBody(b: unknown): b is ContactUpdateResponseBody
 
 export type PrimaryPatchResult = ContactUpdateResponseBody & {
   error?: string;
-  /** Set when next-address-primary responded with an HTTP 4xx. */
+  /** Set when anemone responded with an HTTP 4xx. */
   httpStatus?: number;
 };
 
@@ -136,7 +136,7 @@ function isPrimaryHttp4xx(status: number | undefined): boolean {
   return status !== undefined && status >= 400 && status < 500;
 }
 
-/** Primary returns this when the tenant user is not connected on NextAddress yet. */
+/** Primary returns this when the tenant user is not connected on the platform yet. */
 function isUnknownUserMappingResult(r: PrimaryPatchResult): boolean {
   return r.httpStatus === 404 && r.message === "Unknown user mapping";
 }
@@ -150,8 +150,8 @@ function skippedPrimarySyncResult(
     patches: toSend.map((x) => x.body),
     results: [] as PrimaryPatchResult[],
     attemptedPrimary: false,
-    syncedToNextAddress: false,
-    nextAddressHttp4xx: false,
+    syncedToAnemone: false,
+    anemoneHttp4xx: false,
     failureMessages: [] as string[],
     networkActivity,
     simulationEvents,
@@ -162,19 +162,19 @@ export function summarizePrimarySync(
   results: PrimaryPatchResult[],
   attemptedPrimary: boolean,
 ): {
-  syncedToNextAddress: boolean;
-  nextAddressHttp4xx: boolean;
+  syncedToAnemone: boolean;
+  anemoneHttp4xx: boolean;
   failureMessages: string[];
 } {
   if (!attemptedPrimary || results.length === 0) {
-    return { syncedToNextAddress: false, nextAddressHttp4xx: false, failureMessages: [] };
+    return { syncedToAnemone: false, anemoneHttp4xx: false, failureMessages: [] };
   }
   const failures = results.filter(
     (r) => isPrimaryHttp4xx(r.httpStatus) || r.status === "rejected",
   );
   return {
-    syncedToNextAddress: results.every(isPrimarySyncSuccess),
-    nextAddressHttp4xx: failures.some((r) => isPrimaryHttp4xx(r.httpStatus)),
+    syncedToAnemone: results.every(isPrimarySyncSuccess),
+    anemoneHttp4xx: failures.some((r) => isPrimaryHttp4xx(r.httpStatus)),
     failureMessages: failures
       .map((r) => r.message ?? r.error)
       .filter((m): m is string => Boolean(m)),
@@ -182,7 +182,7 @@ export function summarizePrimarySync(
 }
 
 /**
- * Pushes one PATCH per changed contact dimension to next-address-primary.
+ * Pushes one PATCH per changed contact dimension to anemone.
  * Bodies are minimal (only the slice that actually changed, plus routing ids).
  */
 export async function pushContactUpdatesToPrimary(
@@ -193,8 +193,8 @@ export async function pushContactUpdatesToPrimary(
   patches: ContactUpdateRequest[];
   results: PrimaryPatchResult[];
   attemptedPrimary: boolean;
-  syncedToNextAddress: boolean;
-  nextAddressHttp4xx: boolean;
+  syncedToAnemone: boolean;
+  anemoneHttp4xx: boolean;
   failureMessages: string[];
   networkActivity: NetworkActivityExchange[];
   simulationEvents: SimulationEvent[];
@@ -206,8 +206,8 @@ export async function pushContactUpdatesToPrimary(
       patches: [],
       results: [],
       attemptedPrimary: false,
-      syncedToNextAddress: false,
-      nextAddressHttp4xx: false,
+      syncedToAnemone: false,
+      anemoneHttp4xx: false,
       failureMessages: [],
       networkActivity: options?.networkActivity ?? [],
       simulationEvents: [],
@@ -217,8 +217,8 @@ export async function pushContactUpdatesToPrimary(
   const networkActivity = options?.networkActivity ?? [];
   const client =
     options?.networkActivity != null
-      ? getNextAddressClientWithNetworkLog(networkActivity)
-      : getNextAddressClientOrNull();
+      ? getAnemoneClientWithNetworkLog(networkActivity)
+      : getAnemoneClientOrNull();
   const path =
     options?.networkActivity != null ? getContactUpdatePathForServer() : getContactUpdatePath();
 
@@ -265,13 +265,13 @@ export async function pushContactUpdatesToPrimary(
       if (res.status === "queued") {
         results.push({
           status: "pending_user_review",
-          message: res.message ?? "Queued for NextAddress sync",
+          message: res.message ?? `Queued for ${PLATFORM_NAME} sync`,
         });
       } else {
         results.push(res);
       }
     } catch (e) {
-      if (e instanceof NextAddressError && e.body && isContactUpdateResponseBody(e.body)) {
+      if (e instanceof AnemoneError && e.body && isContactUpdateResponseBody(e.body)) {
         const patchResult: PrimaryPatchResult = {
           ...e.body,
           httpStatus: e.status,
@@ -283,7 +283,7 @@ export async function pushContactUpdatesToPrimary(
         results.push(patchResult);
         continue;
       }
-      if (e instanceof NextAddressError) {
+      if (e instanceof AnemoneError) {
         const msg =
           e.body && typeof (e.body as { message?: unknown }).message === "string"
             ? (e.body as { message: string }).message

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb, type UserRow } from "./client";
-import { getNextAddressClientOrNull } from "@/lib/integrations/primaryClient";
+import { getAnemoneClientOrNull } from "@/lib/integrations/primaryClient";
 
 export type PublicUser = {
   id: string;
@@ -106,7 +106,7 @@ export async function deleteUserById(id: string) {
   const user = getUserById(id);
   if (!user) return null;
 
-  const client = getNextAddressClientOrNull();
+  const client = getAnemoneClientOrNull();
   if (client) {
     try {
       await client.markTenantExternalUserDeleted({ externalUserId: id });

@@ -2,12 +2,13 @@
 
 import {
   contactSyncStateFromPrimaryBatch,
-  createNextAddressWidget,
-  type NextAddressWidgetHandle,
-} from "next-address-server-js/embed";
+  createAnemoneWidget,
+  type AnemoneWidgetHandle,
+} from "anemone-server-js/embed";
 import { armIntegrationSimulationScenario } from "@/lib/integrations/armSimulationScenario";
-import { fetchNextAddressConnection } from "@/lib/integrations/fetchNextAddressConnection";
-import { runNextAddressBridge } from "@/lib/integrations/primaryBridgePopup";
+import { fetchAnemoneConnection } from "@/lib/integrations/fetchAnemoneConnection";
+import { runAnemoneBridge } from "@/lib/integrations/primaryBridgePopup";
+import { PLATFORM_NAME, TENANT_NAME } from "@/lib/config";
 import { useEffect, useRef } from "react";
 import { ContactFormFields } from "./ContactFormFields";
 import type { ContactFormValues, ContactPrimaryResult } from "./types";
@@ -32,7 +33,7 @@ export function ContactBasicPanel({
   onSaveContact,
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const widgetRef = useRef<NextAddressWidgetHandle | null>(null);
+  const widgetRef = useRef<AnemoneWidgetHandle | null>(null);
   const saveRef = useRef(onSaveContact);
 
   useEffect(() => {
@@ -43,13 +44,14 @@ export function ContactBasicPanel({
     const mount = mountRef.current;
     if (!mount) return;
 
-    const widget = createNextAddressWidget({
+    const widget = createAnemoneWidget({
       mount,
-      tenantName: "Paws and Tails",
-      fetchConnection: () => fetchNextAddressConnection(),
+      tenantName: TENANT_NAME,
+      productName: PLATFORM_NAME,
+      fetchConnection: () => fetchAnemoneConnection(),
       simulation: { armScenario: armIntegrationSimulationScenario },
       navigateToPrimary: (url, onComplete) => {
-        runNextAddressBridge(url, async () => {
+        runAnemoneBridge(url, async () => {
           await widgetRef.current?.refresh();
           await onComplete?.();
         });
@@ -90,10 +92,10 @@ export function ContactBasicPanel({
       className="space-y-4"
     >
       <div ref={mountRef} />
-      {primary?.savedLocally && primary.attemptedPrimary && !primary.syncedToNextAddress ? (
+      {primary?.savedLocally && primary.attemptedPrimary && !primary.syncedToAnemone ? (
         <p className="rounded-xl border border-[var(--border)] bg-[var(--page)] px-3 py-2 text-xs text-[var(--muted)]">
-          Your edits were saved in Paws and Tails. See sync status in the NextAddress widget above
-          for error details or try again.
+          Your edits were saved in {TENANT_NAME}. See sync status in the {PLATFORM_NAME} widget
+          above for error details or try again.
         </p>
       ) : null}
       <ContactFormFields
@@ -106,9 +108,9 @@ export function ContactBasicPanel({
       <p className="text-xs text-[var(--muted)]">
         Connection and sync feedback use{" "}
         <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">
-          createNextAddressWidget
+          createAnemoneWidget
         </code>{" "}
-        from <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">next-address-server-js/embed</code>.
+        from <code className="rounded bg-black/[0.04] px-1 py-0.5 font-mono text-[0.7rem]">anemone-server-js/embed</code>.
       </p>
     </div>
   );

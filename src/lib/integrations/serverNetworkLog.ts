@@ -1,10 +1,10 @@
-import { NextAddressClient } from "next-address-server-js";
+import { AnemoneClient } from "anemone-server-js";
 import {
   parseNetworkBody,
   redactNetworkHeaders,
   type NetworkActivityExchange,
-} from "next-address-server-js/embed";
-import { getUpdatePath, isPrimaryMockMode } from "@/lib/config";
+} from "anemone-server-js/embed";
+import { getUpdatePath, isPrimaryMockMode, PLATFORM_NAME } from "@/lib/config";
 
 function newId(): string {
   return `srv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -16,7 +16,7 @@ export function createServerNetworkCollector(): NetworkActivityExchange[] {
 
 export function createLoggingFetch(
   sink: NetworkActivityExchange[],
-  label = "NextAddress primary",
+  label = `${PLATFORM_NAME} primary`,
 ): typeof fetch {
   return async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -83,13 +83,13 @@ export function createLoggingFetch(
   };
 }
 
-export function getNextAddressClientWithNetworkLog(
+export function getAnemoneClientWithNetworkLog(
   sink: NetworkActivityExchange[],
-): NextAddressClient | null {
+): AnemoneClient | null {
   if (isPrimaryMockMode()) return null;
-  const baseUrl = process.env.NEXT_ADDRESS_PRIMARY_BASE_URL!.replace(/\/$/, "");
-  const apiKey = process.env.NEXT_ADDRESS_API_KEY!.trim();
-  return new NextAddressClient({
+  const baseUrl = process.env.ANEMONE_PRIMARY_BASE_URL!.replace(/\/$/, "");
+  const apiKey = process.env.ANEMONE_API_KEY!.trim();
+  return new AnemoneClient({
     baseUrl,
     apiKey,
     allowInsecureLocalhost: true,

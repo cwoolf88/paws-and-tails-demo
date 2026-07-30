@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PLATFORM_NAME } from "@/lib/config";
 
 export default function HomePage() {
   return (
@@ -11,8 +12,8 @@ export default function HomePage() {
           </h1>
           <p className="mt-2 text-lg text-[var(--muted)]">
             Paws and Tails is a pretend pet subscription service with a real purpose: showing how a third-party app
-            nudges NextAddress using{" "}
-            <code className="rounded bg-white px-1.5 py-0.5 text-sm ring-1 ring-[var(--border)]">next-address-server-js</code>{" "}
+            nudges {PLATFORM_NAME} using{" "}
+            <code className="rounded bg-white px-1.5 py-0.5 text-sm ring-1 ring-[var(--border)]">anemone-server-js</code>{" "}
             — PATCHing contact deltas from your UI, then accepting verified webhooks when the network purrs back.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -30,7 +31,7 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="mt-4 text-sm text-[var(--muted)]">
-            Tip: sign in to open the contact form and try NextAddress sync.
+            Tip: sign in to open the contact form and try {PLATFORM_NAME} sync.
           </p>
         </div>
         <div className="relative lg:pt-1">
@@ -57,16 +58,16 @@ export default function HomePage() {
         <div className="mt-3 grid gap-4 sm:grid-cols-3">
           {[
             {
-              title: "Outward (PATCH to NextAddress)",
-              text: "When a pet parent saves contact info, we only send the diffs, using NextAddressClient with method PATCH and your configured path.",
+              title: `Outward (PATCH to ${PLATFORM_NAME})`,
+              text: `When a pet parent saves contact info, we only send the diffs, using AnemoneClient with method PATCH and your configured path.`,
             },
             {
               title: "Webhooks (HMAC, inbound)",
-              text: "NextAddress nudges us on contact.changed; we verify signature, then map the event to our SQLite user with a small callback you can read like plain English.",
+              text: `${PLATFORM_NAME} nudges us on contact.changed; we verify signature, then map the event to our SQLite user with a small callback you can read like plain English.`,
             },
             {
               title: "Outcomes (HTTP status + body)",
-              text: "NextAddress answers with processed, pending, or not-linked vibes — surfaced right next to your form so humans don’t have to read JSON for breakfast.",
+              text: `${PLATFORM_NAME} answers with processed, pending, or not-linked vibes — surfaced right next to your form so humans don’t have to read JSON for breakfast.`,
             },
           ].map((b) => (
             <div key={b.title} className="rounded-2xl border border-[var(--border)] bg-white/90 p-4">

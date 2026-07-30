@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { NEXTADDRESS_BRIDGE_COMPLETE } from "@/lib/integrations/primaryBridgePopup";
+import { ANEMONE_BRIDGE_COMPLETE } from "@/lib/integrations/primaryBridgePopup";
 
 export default function BridgeReturnPage() {
   useEffect(() => {
-    const message = { type: NEXTADDRESS_BRIDGE_COMPLETE };
+    const message = { type: ANEMONE_BRIDGE_COMPLETE };
     const origin = window.location.origin;
 
     if (window.opener && !window.opener.closed) {

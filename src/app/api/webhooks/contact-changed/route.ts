@@ -2,7 +2,7 @@ import {
   parseWebhookEvent,
   verifyWebhookSignature,
   WebhookVerificationError,
-} from "next-address-server-js";
+} from "anemone-server-js";
 import { NextResponse } from "next/server";
 import { getWebhookSecret } from "@/lib/config";
 import {
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   const secret = getWebhookSecret();
   if (!secret) {
     return NextResponse.json(
-      { error: "NEXT_ADDRESS_WEBHOOK_SECRET is not set" },
+      { error: "ANEMONE_WEBHOOK_SECRET is not set" },
       { status: 500 },
     );
   }

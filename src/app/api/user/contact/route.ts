@@ -47,8 +47,8 @@ export async function PUT(request: Request) {
       results: primary.results,
       attemptedPrimary: primary.attemptedPrimary,
       savedLocally: true,
-      syncedToNextAddress: primary.syncedToNextAddress,
-      nextAddressHttp4xx: primary.nextAddressHttp4xx,
+      syncedToAnemone: primary.syncedToAnemone,
+      anemoneHttp4xx: primary.anemoneHttp4xx,
       failureMessages: primary.failureMessages,
     },
   });

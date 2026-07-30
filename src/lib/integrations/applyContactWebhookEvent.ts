@@ -1,7 +1,7 @@
 import type {
   ContactChangeWebhookEvent,
   ContactUpdateReviewedEvent,
-} from "next-address-server-js";
+} from "anemone-server-js";
 import { getUserById, updateUserById, type PublicUser, type UpdateUserInput } from "@/lib/db/users";
 
 type RawEnvelope = {
@@ -53,7 +53,7 @@ export function applyContactChangeFromPrimary(
 }
 
 /**
- * Applies an approved `contact.update.reviewed` event from next-address-primary.
+ * Applies an approved `contact.update.reviewed` event from anemone.
  * Rejected reviews are acknowledged without mutating local state.
  */
 export function applyContactReviewFromPrimary(

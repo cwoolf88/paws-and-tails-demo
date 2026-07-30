@@ -1,6 +1,6 @@
 "use client";
 
-import { NetworkActivityLog } from "next-address-server-js/embed";
+import { NetworkActivityLog } from "anemone-server-js/embed";
 
 let browserLog: NetworkActivityLog | null = null;
 

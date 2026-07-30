@@ -1,9 +1,10 @@
 import { invalidatePrimarySessionCache } from "@/lib/integrations/primarySession";
-import { openPrimarySettingsTab } from "next-address-server-js/embed";
+import { openPrimarySettingsTab } from "anemone-server-js/embed";
+import { PLATFORM_NAME } from "@/lib/config";
 
-export const NEXTADDRESS_BRIDGE_COMPLETE = "next-address-bridge-complete";
+export const ANEMONE_BRIDGE_COMPLETE = "anemone-bridge-complete";
 
-const POPUP_NAME = "nextaddress-bridge";
+const POPUP_NAME = "anemone-bridge";
 const POPUP_FEATURES = "width=520,height=720";
 const HIDDEN_FRAME_TIMEOUT_MS = 30_000;
 
@@ -16,10 +17,10 @@ function isBridgeSignInUrl(url: string): boolean {
 }
 
 /**
- * Runs connect/disconnect on NextAddress inside a hidden iframe. Requires an
+ * Runs connect/disconnect on the primary platform inside a hidden iframe. Requires an
  * existing Clerk session on the primary origin; the host page stays put.
  */
-export function runNextAddressBridgeInHiddenFrame(
+export function runAnemoneBridgeInHiddenFrame(
   url: string,
   onComplete: () => void | Promise<void>,
 ): void {
@@ -27,7 +28,7 @@ export function runNextAddressBridgeInHiddenFrame(
 
   const iframe = document.createElement("iframe");
   iframe.hidden = true;
-  iframe.title = "NextAddress account link";
+    iframe.title = `${PLATFORM_NAME} account link`;
 
   let done = false;
   const timeout = window.setTimeout(() => void finish(), HIDDEN_FRAME_TIMEOUT_MS);
@@ -49,7 +50,7 @@ export function runNextAddressBridgeInHiddenFrame(
   function onMessage(event: MessageEvent) {
     if (event.origin !== window.location.origin) return;
     const data = event.data as { type?: string } | null;
-    if (data?.type !== NEXTADDRESS_BRIDGE_COMPLETE) return;
+    if (data?.type !== ANEMONE_BRIDGE_COMPLETE) return;
     void finish();
   }
 
@@ -58,7 +59,7 @@ export function runNextAddressBridgeInHiddenFrame(
   document.body.appendChild(iframe);
 }
 
-function openNextAddressPopup(
+function openAnemonePopup(
   url: string,
   onComplete: () => void | Promise<void>,
 ): void {
@@ -94,7 +95,7 @@ function openNextAddressPopup(
   function onMessage(event: MessageEvent) {
     if (event.origin !== window.location.origin) return;
     const data = event.data as { type?: string } | null;
-    if (data?.type !== NEXTADDRESS_BRIDGE_COMPLETE) return;
+    if (data?.type !== ANEMONE_BRIDGE_COMPLETE) return;
     void finish();
   }
 
@@ -106,14 +107,14 @@ function openNextAddressPopup(
 }
 
 /**
- * Opens NextAddress sign-in in a popup. When the flow finishes, the popup
+ * Opens primary platform sign-in in a popup. When the flow finishes, the popup
  * lands on /account/contact/bridge-return and notifies the opener.
  */
-export function openNextAddressBridgeFlow(
+export function openAnemoneBridgeFlow(
   url: string,
   onComplete: () => void | Promise<void>,
 ): void {
-  openNextAddressPopup(url, onComplete);
+  openAnemonePopup(url, onComplete);
 }
 
 function isBridgeConnectOrDisconnectUrl(url: string): boolean {
@@ -126,16 +127,16 @@ function isBridgeConnectOrDisconnectUrl(url: string): boolean {
 }
 
 /** Sign-in uses a popup; connect/disconnect use a hidden iframe; settings use a new tab. */
-export function runNextAddressBridge(
+export function runAnemoneBridge(
   url: string,
   onComplete: () => void | Promise<void>,
 ): void {
   if (isBridgeSignInUrl(url)) {
-    openNextAddressBridgeFlow(url, onComplete);
+    openAnemoneBridgeFlow(url, onComplete);
     return;
   }
   if (isBridgeConnectOrDisconnectUrl(url)) {
-    runNextAddressBridgeInHiddenFrame(url, onComplete);
+    runAnemoneBridgeInHiddenFrame(url, onComplete);
     return;
   }
   openPrimarySettingsTab(url);

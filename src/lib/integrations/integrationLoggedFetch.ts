@@ -1,6 +1,6 @@
 "use client";
 
-import { loggedFetch } from "next-address-server-js/embed";
+import { loggedFetch } from "anemone-server-js/embed";
 import { getIntegrationNetworkLog } from "@/lib/integrations/integrationNetworkLog";
 import { getIntegrationSimulationLog } from "@/lib/integrations/integrationSimulationLog";
 

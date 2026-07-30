@@ -2,6 +2,7 @@
 
 import { PhoneNumberField } from "@/components/PhoneNumberField";
 import type { Country } from "react-phone-number-input";
+import { PLATFORM_NAME } from "@/lib/config";
 import type { ContactFormValues } from "./types";
 
 type Props = {
@@ -62,7 +63,7 @@ export function ContactFormFields({ values, onChange, err, saving, onSubmit }: P
           value={values.email}
         />
         <p className="mt-1.5 text-xs text-[var(--muted)]">
-          Email is set when the demo account is created and is used to match this user with NextAddress.
+          Email is set when the demo account is created and is used to match this user with {PLATFORM_NAME}.
         </p>
       </div>
       <PhoneNumberField

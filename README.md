@@ -34,3 +34,14 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Platform branding
+
+`NEXT_PUBLIC_APP_NAME` sets the integrated address **platform** display name (default: `Anemone`).
+It does **not** rename this demo merchant, which stays **Paws and Tails**.
+
+Example `.env.local`:
+
+```bash
+NEXT_PUBLIC_APP_NAME=Anemone
+```

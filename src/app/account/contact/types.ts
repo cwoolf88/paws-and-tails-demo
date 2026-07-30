@@ -30,8 +30,8 @@ export type ContactPrimaryResult = {
   results: { status: string; message?: string; error?: string; httpStatus?: number }[];
   attemptedPrimary: boolean;
   savedLocally?: boolean;
-  syncedToNextAddress?: boolean;
-  nextAddressHttp4xx?: boolean;
+  syncedToAnemone?: boolean;
+  anemoneHttp4xx?: boolean;
   failureMessages?: string[];
 };
 

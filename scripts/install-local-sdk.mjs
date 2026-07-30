@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Pins next-address-server-js to a local checkout (not the npm registry).
+ * Pins anemone-server-js to a local checkout (not the npm registry).
  * Usage:
  *   npm run install:sdk:local
- *   LOCAL_NEXT_ADDRESS_SERVER_JS=../other/next-address-server-js npm run install:sdk:local
+ *   LOCAL_ANEMONE_SERVER_JS=../other/anemone-server-js npm run install:sdk:local
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -13,11 +13,14 @@ import { resolvePath } from "./lib/resolveLocalSdkPath.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, "..");
-const raw = process.env.LOCAL_NEXT_ADDRESS_SERVER_JS || "../next-address-server-js";
+const raw =
+  process.env.LOCAL_ANEMONE_SERVER_JS?.trim() ||
+  process.env.LOCAL_ANEMONE_SERVER_JS?.trim() ||
+  "../anemone-server-js";
 const sdkPath = resolvePath(projectRoot, raw);
 const pkg = path.join(sdkPath, "package.json");
 if (!fs.existsSync(pkg)) {
-  console.error("Could not find next-address-server-js (missing package.json):", sdkPath);
+  console.error("Could not find anemone-server-js (missing package.json):", sdkPath);
   process.exit(1);
 }
 if (!fs.existsSync(path.join(sdkPath, "dist", "index.js"))) {

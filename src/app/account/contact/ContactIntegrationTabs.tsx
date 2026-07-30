@@ -9,7 +9,7 @@ const tabs: { id: ContactIntegrationTab; label: string; hint: string }[] = [
   {
     id: "basic",
     label: "Basic integration",
-    hint: "SDK account card and sync UI from next-address-server-js",
+    hint: "SDK account card and sync UI from anemone-server-js",
   },
   {
     id: "custom",

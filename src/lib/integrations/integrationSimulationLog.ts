@@ -1,6 +1,6 @@
 "use client";
 
-import { SimulationEventLog } from "next-address-server-js/embed";
+import { SimulationEventLog } from "anemone-server-js/embed";
 
 let browserLog: SimulationEventLog | null = null;
 

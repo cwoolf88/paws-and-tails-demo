@@ -6,7 +6,8 @@ import { ContactCustomPanel } from "./ContactCustomPanel";
 import { ContactIntegrationTabs } from "./ContactIntegrationTabs";
 import { integrationLoggedFetch } from "@/lib/integrations/integrationLoggedFetch";
 import { getIntegrationSimulationLog } from "@/lib/integrations/integrationSimulationLog";
-import { readSimulationEventsField } from "next-address-server-js/embed";
+import { readSimulationEventsField } from "anemone-server-js/embed";
+import { PLATFORM_NAME, TENANT_NAME } from "@/lib/config";
 import type {
   ContactFormValues,
   ContactIntegrationTab,
@@ -127,10 +128,10 @@ export default function ContactPage() {
     <div className="mx-auto max-w-xl space-y-4">
       <h1 className="font-display text-3xl font-bold">My account</h1>
       <p className="text-sm text-[var(--muted)]">
-        Compare the packaged NextAddress UI with a hand-rolled integration. Both paths save to
-        Paws and Tails and PATCH changed contact fields to NextAddress via{" "}
+        Compare the packaged {PLATFORM_NAME} UI with a hand-rolled integration. Both paths save to
+        {TENANT_NAME} and PATCH changed contact fields to {PLATFORM_NAME} via{" "}
         <code className="rounded bg-white px-1.5 py-0.5 text-sm ring-1 ring-[var(--border)]">
-          next-address-server-js
+          anemone-server-js
         </code>
         .
       </p>
