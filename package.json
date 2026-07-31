@@ -9,14 +9,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
     "install:sdk:local": "node ./scripts/install-local-sdk.mjs",
     "sdk:rebuild:local": "node ./scripts/rebuild-local-sdk.mjs",
     "sdk:sync:local": "node ./scripts/sync-local-sdk.mjs"
   },
   "dependencies": {
+    "anemone-server-js": "file:../anemone-server-js",
     "better-sqlite3": "^12.9.0",
     "next": "15.5.15",
-    "anemone-server-js": "file:../anemone-server-js",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-phone-number-input": "^3.4.17",
@@ -32,6 +35,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

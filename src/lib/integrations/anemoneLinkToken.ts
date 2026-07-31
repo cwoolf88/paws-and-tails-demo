@@ -1,8 +1,8 @@
 /** Prefix embedded in signed connect tokens (falls back for local mock). */
 export function getApiKeyPrefix() {
-  const explicit = process.env.NEXT_ADDRESS_API_KEY_PREFIX?.trim();
+  const explicit = process.env.ANEMONE_API_KEY_PREFIX?.trim();
   if (explicit) return explicit;
-  const apiKey = process.env.NEXT_ADDRESS_API_KEY?.trim();
+  const apiKey = process.env.ANEMONE_API_KEY?.trim();
   if (apiKey) {
     const dot = apiKey.indexOf(".");
     if (dot > 0) return apiKey.slice(0, dot);

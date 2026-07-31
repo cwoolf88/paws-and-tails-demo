@@ -5,12 +5,11 @@ import {
   injectWidgetStyles,
   renderSyncBlock,
   sessionPollRefreshLabel,
-} from "next-address-server-js/embed";
-import { useNextAddressConnection } from "@/lib/integrations/useNextAddressConnection";
+} from "anemone-server-js/embed";
+import { useAnemoneConnection } from "@/lib/integrations/useAnemoneConnection";
+import { PLATFORM_NAME, TENANT_NAME } from "@/lib/config";
 import { useEffect, useRef } from "react";
 import type { ContactPrimaryResult } from "./types";
-
-const APP_NAME = "Paws and Tails";
 
 type Props = {
   primary: ContactPrimaryResult | null;
@@ -25,7 +24,7 @@ function connectionSubtitle(
 ): string {
   const app = appName || "your app";
   if (connected) {
-    return `Contact updates from ${app} sync through your shared NextAddress profile.`;
+    return `Contact updates from ${app} sync through your shared ${PLATFORM_NAME} profile.`;
   }
   if (signedIntoPrimary) {
     return `Connect ${app} to keep your address and contact info in sync across partners.`;
@@ -39,16 +38,16 @@ function connectionStatusTooltip(
   mockMode: boolean,
 ): string {
   if (statusLoading) {
-    return "Checking connection status with NextAddress…";
+    return `Checking connection status with ${PLATFORM_NAME}…`;
   }
   if (connected) {
     return mockMode
-      ? "Connected (mock). Changes you save sync to your NextAddress profile."
-      : "Connected. Changes you save in this app sync to your NextAddress profile.";
+      ? `Connected (mock). Changes you save sync to your ${PLATFORM_NAME} profile.`
+      : `Connected. Changes you save in this app sync to your ${PLATFORM_NAME} profile.`;
   }
   return mockMode
     ? "Not connected (mock). Connect to sync contact and address updates."
-    : "Not connected. Connect to send contact and address updates to NextAddress.";
+    : `Not connected. Connect to send contact and address updates to ${PLATFORM_NAME}.`;
 }
 
 function ConnectionStatusIcon({
@@ -109,8 +108,8 @@ function SettingsGearButton({
   onClick: () => void;
 }) {
   const label = signedIntoPrimary
-    ? "Manage your addresses in NextAddress"
-    : "Sign in to manage your addresses in NextAddress";
+    ? `Manage your addresses in ${PLATFORM_NAME}`
+    : `Sign in to manage your addresses in ${PLATFORM_NAME}`;
 
   return (
     <button
@@ -143,7 +142,7 @@ function ConnectionLoadingSkeleton() {
     <section
       className="rounded-2xl border border-[var(--border)] bg-white/90 p-4 text-sm shadow"
       aria-busy="true"
-      aria-label="NextAddress"
+      aria-label={PLATFORM_NAME}
     >
       <div className="animate-pulse space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -156,12 +155,12 @@ function ConnectionLoadingSkeleton() {
         <div className="h-9 w-32 rounded-full bg-[var(--page)]" />
         <div className="h-10 w-full rounded-xl bg-[var(--page)]" />
       </div>
-      <span className="sr-only">Loading NextAddress…</span>
+      <span className="sr-only">Loading {PLATFORM_NAME}…</span>
     </section>
   );
 }
 
-export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: Props) {
+export function CustomAnemoneContactUI({ primary, saving, onSaveContact }: Props) {
   const {
     info,
     connected,
@@ -181,7 +180,7 @@ export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: P
     setSyncState,
     bindSyncRetry,
     sync,
-  } = useNextAddressConnection({ enableSync: true });
+  } = useAnemoneConnection({ enableSync: true });
   const syncMountRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -222,7 +221,7 @@ export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: P
   if (!info) {
     return (
       <p className="text-sm text-red-600" role="alert">
-        {err ?? "NextAddress connection unavailable."}
+        {err ?? `${PLATFORM_NAME} connection unavailable.`}
       </p>
     );
   }
@@ -230,13 +229,13 @@ export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: P
   return (
     <section
       className="rounded-2xl border border-[var(--border)] bg-white/90 p-4 text-sm shadow"
-      aria-label="NextAddress"
+      aria-label={PLATFORM_NAME}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold text-[var(--ink)]">NextAddress</h2>
+          <h2 className="font-semibold text-[var(--ink)]">{PLATFORM_NAME}</h2>
           <p className="mt-1 text-[var(--muted)]">
-            {connectionSubtitle(connected, signedIntoPrimary, APP_NAME)}
+            {connectionSubtitle(connected, signedIntoPrimary, TENANT_NAME)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -311,7 +310,7 @@ export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: P
               </button>
               {!info.connectSignInUrl ? (
                 <p className="text-xs text-[var(--muted)]">
-                  Set NEXT_ADDRESS_PRIMARY_BASE_URL to enable sign-in.
+                  Set ANEMONE_PRIMARY_BASE_URL to enable sign-in.
                 </p>
               ) : null}
             </>
@@ -327,11 +326,11 @@ export function CustomNextAddressContactUI({ primary, saving, onSaveContact }: P
         ) : null}
       </div>
 
-      <div ref={syncMountRef} className="na-widget-host" />
+      <div ref={syncMountRef} className="an-widget-host" />
 
-      {primary?.savedLocally && primary.attemptedPrimary && !primary.syncedToNextAddress ? (
+      {primary?.savedLocally && primary.attemptedPrimary && !primary.syncedToAnemone ? (
         <p className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--page)] px-3 py-2 text-xs text-[var(--muted)]">
-          Your edits were saved in Paws and Tails. See sync status above for NextAddress error
+          Your edits were saved in {TENANT_NAME}. See sync status above for {PLATFORM_NAME} error
           details or try again.
         </p>
       ) : null}

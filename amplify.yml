@@ -1,0 +1,30 @@
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - nvm install 20
+            - nvm use 20
+            - |
+              if [ ! -d ../anemone-server-js ]; then
+                if [ -n "${GH_PRIVATE_REPO_TOKEN:-}" ]; then
+                  git clone --depth 1 https://x-access-token:${GH_PRIVATE_REPO_TOKEN}@github.com/cwoolf88/anemone-server-js.git ../anemone-server-js
+                else
+                  git clone --depth 1 https://github.com/cwoolf88/anemone-server-js.git ../anemone-server-js
+                fi
+              fi
+            - (cd ../anemone-server-js && npm ci && npm run build)
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - node_modules/**/*
+          - ../anemone-server-js/node_modules/**/*
+      buildPath: /

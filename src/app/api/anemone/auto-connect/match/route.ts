@@ -1,4 +1,4 @@
-import { handleAutoConnectMatchRequest } from "next-address-server-js";
+import { handleAutoConnectMatchRequest } from "anemone-server-js";
 import { getWebhookSecret } from "@/lib/config";
 import { getUserByEmail } from "@/lib/db/users";
 

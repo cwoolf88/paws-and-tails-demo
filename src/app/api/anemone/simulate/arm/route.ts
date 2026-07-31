@@ -4,13 +4,14 @@ import { getUserById } from "@/lib/db/users";
 import { armTenantSimulation } from "@/lib/integrations/tenantSimulationArms";
 import {
   createServerNetworkCollector,
-  getNextAddressClientWithNetworkLog,
+  getAnemoneClientWithNetworkLog,
 } from "@/lib/integrations/serverNetworkLog";
 import {
   isIntegrationSimulationScenario,
   isTenantLocalSimulationScenario,
-} from "next-address-server-js";
-import type { ArmIntegrationSimulationResponse } from "next-address-server-js";
+} from "anemone-server-js";
+import type { ArmIntegrationSimulationResponse } from "anemone-server-js";
+import { PLATFORM_NAME } from "@/lib/config";
 
 export const runtime = "nodejs";
 
@@ -42,12 +43,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ...response, networkActivity: [] });
   }
 
-  const client = getNextAddressClientWithNetworkLog(networkActivity);
+  const client = getAnemoneClientWithNetworkLog(networkActivity);
   if (!client) {
     if (scenario === "security_hold") {
       return NextResponse.json(
         {
-          error: "Security hold simulation requires a live NextAddress primary connection.",
+          error: `Security hold simulation requires a live ${PLATFORM_NAME} primary connection.`,
         },
         { status: 503 },
       );
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
   } catch (e) {
     const message =
       e instanceof Error && e.message === "Invalid JSON in response"
-        ? "NextAddress primary returned a non-JSON response. Ensure partner API routes (including /api/v1/simulate/arm) are exempt from session auth on primary."
+        ? `${PLATFORM_NAME} primary returned a non-JSON response. Ensure partner API routes (including /api/v1/simulate/arm) are exempt from session auth on primary.`
         : e instanceof Error
           ? e.message
           : "Simulation failed";

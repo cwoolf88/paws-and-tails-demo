@@ -1,9 +1,10 @@
 "use client";
 
-import { useNextAddressConnection } from "@/lib/integrations/useNextAddressConnection";
+import { useAnemoneConnection } from "@/lib/integrations/useAnemoneConnection";
+import { PLATFORM_NAME, TENANT_NAME } from "@/lib/config";
 
 /** Default packaged-style connection card (used outside the contact tab comparison). */
-export function NextAddressConnectionToggle() {
+export function AnemoneConnectionToggle() {
   const {
     info,
     connected,
@@ -15,27 +16,35 @@ export function NextAddressConnectionToggle() {
     goToConnectAccount,
     goToDisconnect,
     goToSettings,
-  } = useNextAddressConnection();
+  } = useAnemoneConnection();
 
   if (loading) {
-    return <p className="text-sm text-[var(--muted)]">Loading NextAddress…</p>;
+    return <p className="text-sm text-[var(--muted)]">Loading {PLATFORM_NAME}…</p>;
   }
   if (!info) {
-    return <p className="text-sm text-red-600">{err ?? "NextAddress connection unavailable."}</p>;
+    return (
+      <p className="text-sm text-red-600">
+        {err ?? `${PLATFORM_NAME} connection unavailable.`}
+      </p>
+    );
   }
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-white/90 p-4 text-sm shadow">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-[var(--ink)]">NextAddress</h2>
+          <h2 className="font-semibold text-[var(--ink)]">{PLATFORM_NAME}</h2>
           <p className="mt-1 text-[var(--muted)]">
             {connected ? (
-              <>Contact updates from Paws and Tails sync through your shared NextAddress profile.</>
+              <>
+                Contact updates from {TENANT_NAME} sync through your shared {PLATFORM_NAME} profile.
+              </>
             ) : signedIntoPrimary ? (
-              <>Connect Paws and Tails to keep your address and contact info in sync across partners.</>
+              <>
+                Connect {TENANT_NAME} to keep your address and contact info in sync across partners.
+              </>
             ) : (
-              <>One address profile for everywhere you shop—sign in to connect Paws and Tails.</>
+              <>One address profile for everywhere you shop—sign in to connect {TENANT_NAME}.</>
             )}
           </p>
         </div>
@@ -95,8 +104,8 @@ export function NextAddressConnectionToggle() {
           <button
             type="button"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--page)] text-[var(--muted)] shadow-sm hover:bg-white hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Manage your addresses in NextAddress"
-            title="Manage your addresses in NextAddress"
+            aria-label={`Manage your addresses in ${PLATFORM_NAME}`}
+            title={`Manage your addresses in ${PLATFORM_NAME}`}
             disabled={statusLoading}
             onClick={goToSettings}
           >
@@ -118,7 +127,7 @@ export function NextAddressConnectionToggle() {
       </div>
       {!info.connectSignInUrl && !connected && !signedIntoPrimary ? (
         <p className="mt-2 text-xs text-[var(--muted)]">
-          Set NEXT_ADDRESS_PRIMARY_BASE_URL to enable sign-in.
+          Set ANEMONE_PRIMARY_BASE_URL to enable sign-in.
         </p>
       ) : null}
     </div>

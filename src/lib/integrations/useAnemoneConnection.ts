@@ -1,18 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { runNextAddressBridge } from "@/lib/integrations/primaryBridgePopup";
+import { runAnemoneBridge } from "@/lib/integrations/primaryBridgePopup";
 import {
-  createNextAddressIntegration,
+  createAnemoneIntegration,
   type ContactSyncDisplayState,
   type IntegrationSimulationScenario,
-  type NextAddressIntegrationHandle,
-  type NextAddressIntegrationState,
-} from "next-address-server-js/embed";
+  type AnemoneIntegrationHandle,
+  type AnemoneIntegrationState,
+} from "anemone-server-js/embed";
 import { armIntegrationSimulationScenario } from "@/lib/integrations/armSimulationScenario";
-import { fetchNextAddressConnection } from "@/lib/integrations/fetchNextAddressConnection";
+import { fetchAnemoneConnection } from "@/lib/integrations/fetchAnemoneConnection";
+import { PLATFORM_NAME, TENANT_NAME } from "@/lib/config";
 
-const initialState: NextAddressIntegrationState = {
+const initialState: AnemoneIntegrationState = {
   connection: {
     loading: true,
     error: null,
@@ -26,7 +27,8 @@ const initialState: NextAddressIntegrationState = {
   },
   sync: { status: "idle" },
   syncBusy: false,
-  tenantName: "Paws and Tails",
+  tenantName: TENANT_NAME,
+  productName: PLATFORM_NAME,
   sessionPoll: { active: false, timedOut: false, phase: null },
   addressChangeHold: null,
 };
@@ -35,18 +37,19 @@ type Options = {
   enableSync?: boolean;
 };
 
-export function useNextAddressConnection(options: Options = {}) {
-  const integrationRef = useRef<NextAddressIntegrationHandle | null>(null);
+export function useAnemoneConnection(options: Options = {}) {
+  const integrationRef = useRef<AnemoneIntegrationHandle | null>(null);
   const syncRetryRef = useRef<(() => Promise<void> | void) | null>(null);
-  const [state, setState] = useState<NextAddressIntegrationState>(initialState);
+  const [state, setState] = useState<AnemoneIntegrationState>(initialState);
 
   useEffect(() => {
-    const integration = createNextAddressIntegration({
-      tenantName: "Paws and Tails",
-      fetchConnection: () => fetchNextAddressConnection(),
+    const integration = createAnemoneIntegration({
+      tenantName: TENANT_NAME,
+      productName: PLATFORM_NAME,
+      fetchConnection: () => fetchAnemoneConnection(),
       simulation: { armScenario: armIntegrationSimulationScenario },
       navigateToPrimary: (url, onComplete) => {
-        runNextAddressBridge(url, async () => {
+        runAnemoneBridge(url, async () => {
           await integration.refreshSession();
           await onComplete?.();
         });
@@ -111,7 +114,7 @@ export function useNextAddressConnection(options: Options = {}) {
     getSettingsUrl: () => integrationRef.current?.getSettingsUrl() ?? null,
     setSyncState,
     bindSyncRetry,
-    reportSyncResult: (result: Parameters<NextAddressIntegrationHandle["reportSyncResult"]>[0]) =>
+    reportSyncResult: (result: Parameters<AnemoneIntegrationHandle["reportSyncResult"]>[0]) =>
       integrationRef.current?.reportSyncResult(result),
     reportSyncError: (error: unknown) => integrationRef.current?.reportSyncError(error),
     sync: runSync,

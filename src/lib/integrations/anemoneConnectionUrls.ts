@@ -1,5 +1,5 @@
-import { encodeExternalUserId } from "next-address-server-js";
-import { getApiKeyPrefix } from "@/lib/integrations/nextAddressLinkToken";
+import { encodeExternalUserId } from "anemone-server-js";
+import { getApiKeyPrefix } from "@/lib/integrations/anemoneLinkToken";
 
 export function buildPrimaryConnectPath(
   linkExternalUserId: string,

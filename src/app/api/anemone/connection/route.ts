@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth/session";
 import {
-  getNextAddressConnectionBridgeReturnUrl,
-  getNextAddressConnectionReturnUrl,
+  getAnemoneConnectionBridgeReturnUrl,
+  getAnemoneConnectionReturnUrl,
   getPrimaryBaseUrl,
   isPrimaryMockMode,
 } from "@/lib/config";
@@ -13,16 +13,16 @@ import {
   buildPrimaryConnectUrlFromToken,
   buildPrimaryDisconnectSignInUrlFromToken,
   buildPrimaryDisconnectUrlFromToken,
-} from "@/lib/integrations/nextAddressConnectionUrls";
+} from "@/lib/integrations/anemoneConnectionUrls";
 import {
   createServerNetworkCollector,
-  getNextAddressClientWithNetworkLog,
+  getAnemoneClientWithNetworkLog,
 } from "@/lib/integrations/serverNetworkLog";
-import { getNextAddressClientOrNull } from "@/lib/integrations/primaryClient";
+import { getAnemoneClientOrNull } from "@/lib/integrations/primaryClient";
 import {
   simulationEventsFromConsume,
   type NetworkActivityExchange,
-} from "next-address-server-js/embed";
+} from "anemone-server-js/embed";
 import {
   consumeTenantSimulation,
   tenantSimulationConnectionFetchError,
@@ -38,8 +38,8 @@ async function resolveConnectExternalUserId(
 ): Promise<string | null> {
   const client =
     networkActivity != null
-      ? getNextAddressClientWithNetworkLog(networkActivity)
-      : getNextAddressClientOrNull();
+      ? getAnemoneClientWithNetworkLog(networkActivity)
+      : getAnemoneClientOrNull();
   if (client) {
     try {
       const { linkToken } = await client.mintDirectConnectToken({ externalUserId });
@@ -77,10 +77,10 @@ export async function GET() {
   }
 
   const primaryBaseUrl = getPrimaryBaseUrl();
-  const returnUrl = getNextAddressConnectionBridgeReturnUrl();
-  const pageReturnUrl = getNextAddressConnectionReturnUrl();
+  const returnUrl = getAnemoneConnectionBridgeReturnUrl();
+  const pageReturnUrl = getAnemoneConnectionReturnUrl();
   const externalUserId = user.id;
-  const signingSecret = process.env.NEXT_ADDRESS_WEBHOOK_SECRET?.trim() ?? "";
+  const signingSecret = process.env.ANEMONE_WEBHOOK_SECRET?.trim() ?? "";
 
   const networkActivity = createServerNetworkCollector();
   const connectExternalUserId = primaryBaseUrl
