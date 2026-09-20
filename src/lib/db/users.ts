@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { hashPassword, isPasswordSet, verifyPassword } from "@/lib/auth/password";
 import { getDb, type UserRow } from "./client";
 import { getAnemoneClientOrNull } from "@/lib/integrations/primaryClient";
 
@@ -73,6 +74,7 @@ export type CreateUserInput = {
   firstName: string;
   lastName: string;
   email: string;
+  password: string;
 };
 
 export function createUser(input: CreateUserInput) {
@@ -81,25 +83,62 @@ export function createUser(input: CreateUserInput) {
   const id = randomUUID();
   const fullName = `${input.firstName} ${input.lastName}`.trim();
   const email = input.email.trim();
+  const passwordHash = hashPassword(input.password);
 
   database
     .prepare(
       `INSERT INTO users (
         id, email, full_name, password_hash, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at
       ) VALUES (
-        @id, @email, @fullName, '', '', '', '', '', '', '', 'US', @now, @now
+        @id, @email, @fullName, @passwordHash, '', '', '', '', '', '', 'US', @now, @now
       )`,
     )
     .run({
       id,
       email,
       fullName,
+      passwordHash,
       now,
     });
 
   const created = getUserById(id);
   if (!created) throw new Error("Failed to create user");
   return created;
+}
+
+export type PasswordLoginResult =
+  | { ok: true; user: PublicUser }
+  | { ok: false; code: "invalid_credentials" | "password_not_set"; message: string };
+
+/** Email + password login used by the browser-agent demo path. */
+export function authenticateWithPassword(
+  email: string,
+  password: string,
+): PasswordLoginResult {
+  const row = getUserRowByEmail(email);
+  if (!row) {
+    return {
+      ok: false,
+      code: "invalid_credentials",
+      message: "Incorrect email or password.",
+    };
+  }
+  if (!isPasswordSet(row.password_hash)) {
+    return {
+      ok: false,
+      code: "password_not_set",
+      message:
+        "This demo account has no password yet. Sign up a new account with a password, or use the demo user picker below.",
+    };
+  }
+  if (!verifyPassword(password, row.password_hash)) {
+    return {
+      ok: false,
+      code: "invalid_credentials",
+      message: "Incorrect email or password.",
+    };
+  }
+  return { ok: true, user: rowToUser(row) };
 }
 
 export async function deleteUserById(id: string) {

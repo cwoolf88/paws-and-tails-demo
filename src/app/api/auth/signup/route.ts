@@ -8,6 +8,7 @@ type Body = {
   firstName?: string;
   lastName?: string;
   email?: string;
+  password?: string;
 };
 
 function isValidEmail(email: string) {
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
   const firstName = body.firstName?.trim() ?? "";
   const lastName = body.lastName?.trim() ?? "";
   const email = body.email?.trim() ?? "";
+  const password = body.password ?? "";
 
   if (!firstName || !lastName) {
     return NextResponse.json({ error: "First and last name are required." }, { status: 400 });
@@ -28,11 +30,17 @@ export async function POST(request: Request) {
   if (!email || !isValidEmail(email)) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   }
+  if (password.length < 8) {
+    return NextResponse.json(
+      { error: "Password must be at least 8 characters." },
+      { status: 400 },
+    );
+  }
   if (getUserByEmail(email)) {
     return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   }
 
-  const user = createUser({ firstName, lastName, email });
+  const user = createUser({ firstName, lastName, email, password });
   await setSessionUserId(user.id);
   return NextResponse.json({ user }, { status: 201 });
 }

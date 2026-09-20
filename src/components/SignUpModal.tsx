@@ -14,6 +14,7 @@ export function SignUpModal({ open, onClose, onSuccess }: Props) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -42,7 +43,7 @@ export function SignUpModal({ open, onClose, onSuccess }: Props) {
     const r = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ firstName, lastName, email }),
+      body: JSON.stringify({ firstName, lastName, email, password }),
     });
     const data = (await r.json().catch(() => ({}))) as { error?: string };
     if (!r.ok) {
@@ -53,6 +54,7 @@ export function SignUpModal({ open, onClose, onSuccess }: Props) {
     setFirstName("");
     setLastName("");
     setEmail("");
+    setPassword("");
     setSaving(false);
     onSuccess();
   }
@@ -142,6 +144,26 @@ export function SignUpModal({ open, onClose, onSuccess }: Props) {
                 example+user1@gmail.com
               </code>
               ) to share one inbox across multiple demo users.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium" htmlFor="signup-password">
+              Password
+            </label>
+            <input
+              id="signup-password"
+              data-testid="signup-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--page)] px-3 py-2 text-sm"
+            />
+            <p className="mt-1.5 text-xs text-[var(--muted)]">
+              At least 8 characters. Used when Anemone’s browser agent signs in to update your address.
             </p>
           </div>
 

@@ -80,15 +80,21 @@ export function ContactFormFields({ values, onChange, err, saving, onSubmit }: P
           </label>
           <input
             id={`contact-${k}`}
+            data-testid={`contact-${k}`}
             className="mt-1.5 w-full rounded-xl border border-[var(--border)] px-3 py-2.5 text-sm"
             value={values[k]}
             onChange={(e) => setField(k, e.target.value)}
           />
         </div>
       ))}
-      {err ? <p className="text-sm text-red-600">{err}</p> : null}
+      {err ? (
+        <p className="text-sm text-red-600" data-testid="contact-form-error" role="alert">
+          {err}
+        </p>
+      ) : null}
       <button
         type="submit"
+        data-testid="contact-save"
         disabled={saving}
         className="btn-primary w-full rounded-xl py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
       >
