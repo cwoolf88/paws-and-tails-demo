@@ -25,12 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout demo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: paws-and-tails-demo
 
       - name: Checkout anemone-server-js
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cwoolf88/anemone-server-js
           path: anemone-server-js
@@ -111,7 +111,7 @@ jobs:
 
       - name: Ensure production release tag
         if: github.ref == 'refs/heads/main'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ github.token }}
