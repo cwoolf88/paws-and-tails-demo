@@ -1,0 +1,194 @@
+name: Promote staging to production
+
+# Continuous delivery to production: merge the verified staging tip into main,
+# then start an Amplify RELEASE. Prefer this path for daily releases instead of
+# ad-hoc commits directly on main.
+#
+# Configure the GitHub Environment `production` with required reviewers so the
+# scheduled run pauses for approval before merging.
+
+on:
+  schedule:
+    # Weekdays 15:00 UTC ≈ 08:00 America/Los_Angeles (PDT)
+    - cron: "0 15 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: "Skip re-running CI checks (not recommended)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: paws-promote-production
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  verify:
+    name: Verify staging tip
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_tests != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout demo (staging)
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          path: paws-and-tails-demo
+
+      - name: Checkout anemone-server-js
+        uses: actions/checkout@v4
+        with:
+          repository: cwoolf88/anemone-server-js
+          path: anemone-server-js
+          token: ${{ secrets.GH_PRIVATE_REPO_TOKEN || github.token }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            paws-and-tails-demo/package-lock.json
+            anemone-server-js/package-lock.json
+
+      - name: Build SDK
+        working-directory: anemone-server-js
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install app deps
+        working-directory: paws-and-tails-demo
+        run: npm ci
+
+      - name: Lint
+        working-directory: paws-and-tails-demo
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: paws-and-tails-demo
+        run: npm run test:unit
+
+      - name: Integration tests
+        working-directory: paws-and-tails-demo
+        run: npm run test:integration
+
+      - name: Production build
+        working-directory: paws-and-tails-demo
+        env:
+          ANEMONE_USE_MOCK: "1"
+          NEXT_PUBLIC_APP_NAME: "Paws and Tails"
+          NEXT_PUBLIC_APP_ENV: staging
+          APP_ENV: staging
+        run: npm run build
+
+  promote:
+    name: Merge staging → main and deploy
+    needs: [verify]
+    if: ${{ always() && (needs.verify.result == 'success' || needs.verify.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Prefer a PAT so the push can also trigger the CI workflow; the
+          # Amplify RELEASE below still runs even if cascade is blocked.
+          token: ${{ secrets.GH_PRIVATE_REPO_TOKEN || github.token }}
+
+      - name: Merge staging into main and tag release
+        id: merge
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin staging main --tags --force
+          STAGING_SHA=$(git rev-parse origin/staging)
+          MAIN_SHA=$(git rev-parse origin/main)
+          echo "staging_sha=$STAGING_SHA" >> "$GITHUB_OUTPUT"
+          echo "main_sha_before=$MAIN_SHA" >> "$GITHUB_OUTPUT"
+          git checkout main
+          git reset --hard origin/main
+          if [ "$STAGING_SHA" != "$MAIN_SHA" ]; then
+            echo "already_current=false" >> "$GITHUB_OUTPUT"
+            if git merge --ff-only origin/staging; then
+              echo "Fast-forwarded main to staging"
+            else
+              git merge --no-ff origin/staging -m "chore: promote staging to production ($(date -u +%Y-%m-%d))"
+            fi
+          else
+            echo "already_current=true" >> "$GITHUB_OUTPUT"
+            echo "staging and main already point at $STAGING_SHA"
+          fi
+
+          EXISTING="$(git describe --tags --match 'v*' --exact-match 2>/dev/null || true)"
+          if [ -n "${EXISTING}" ]; then
+            TAG="${EXISTING}"
+            echo "Commit already tagged as ${TAG}"
+          else
+            TAG="$(bash scripts/next-release-tag.sh)"
+            git tag -a "${TAG}" -m "Release ${TAG}"
+            echo "Created local tag ${TAG}"
+          fi
+          # Push tag before main so CI / Amplify see the release identity first.
+          git push origin "refs/tags/${TAG}"
+          git push origin main
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Pushed main=$(git rev-parse HEAD) tag=${TAG}"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+
+      - name: Start Amplify production release
+        id: start
+        env:
+          APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_ID}" ]; then
+            echo "AMPLIFY_APP_ID secret is not set"
+            exit 1
+          fi
+          # Do not cancel RUNNING production jobs — finish the in-flight rollout.
+          PENDING=$(aws amplify list-jobs --app-id "$APP_ID" --branch-name main --max-results 20 --query 'jobSummaries[?status==`PENDING`].jobId' --output text)
+          for JOB_ID in $PENDING; do
+            echo "Cancelling pending Amplify job $JOB_ID"
+            aws amplify stop-job --app-id "$APP_ID" --branch-name main --job-id "$JOB_ID" || true
+          done
+          JOB_ID=$(aws amplify start-job \
+            --app-id "$APP_ID" \
+            --branch-name main \
+            --job-type RELEASE \
+            --query 'jobSummary.jobId' \
+            --output text)
+          echo "Started Amplify job $JOB_ID on main"
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Amplify job
+        env:
+          APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
+          JOB_ID: ${{ steps.start.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            STATUS=$(aws amplify get-job --app-id "$APP_ID" --branch-name main --job-id "$JOB_ID" --query 'job.summary.status' --output text)
+            echo "Amplify status: $STATUS"
+            case "$STATUS" in
+              SUCCEED) exit 0 ;;
+              FAILED|CANCELLED) exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "Timed out waiting for Amplify"
+          exit 1

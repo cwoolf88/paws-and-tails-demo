@@ -2,13 +2,15 @@ name: CI
 
 on:
   pull_request:
-    branches: [develop, test, main]
+    branches: [develop, test, staging, main]
   push:
-    branches: [develop, test, main]
+    branches: [develop, test, staging, main]
 
+# Continuous deploys on lower envs cancel superseded runs. Production never
+# cancels an in-flight release (zero-downtime / daily release safety).
 concurrency:
   group: paws-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -77,9 +79,18 @@ jobs:
   deploy:
     name: Deploy to Amplify
     needs: build-and-test
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/main')
+    if: >
+      github.event_name == 'push' && (
+        github.ref == 'refs/heads/develop' ||
+        github.ref == 'refs/heads/test' ||
+        github.ref == 'refs/heads/staging' ||
+        github.ref == 'refs/heads/main'
+      )
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'test' && 'test' || 'development' }}
+    permissions:
+      contents: write
+      id-token: write
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || github.ref_name == 'test' && 'test' || 'development' }}
     steps:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -87,13 +98,62 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
 
-      - name: Cancel in-progress Amplify jobs
-        env:
-          APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
-          BRANCH: ${{ github.ref_name }}
+      - name: Map branch to Amplify branch
+        id: meta
+        run: |
+          echo "amplify_branch=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          case "${GITHUB_REF_NAME}" in
+            main) echo "app_env=production" >> "$GITHUB_OUTPUT" ;;
+            staging) echo "app_env=staging" >> "$GITHUB_OUTPUT" ;;
+            test) echo "app_env=test" >> "$GITHUB_OUTPUT" ;;
+            *) echo "app_env=development" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Ensure production release tag
+        if: github.ref == 'refs/heads/main'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Create production tag if missing
+        if: github.ref == 'refs/heads/main'
+        id: tag
         run: |
           set -euo pipefail
-          JOBS=$(aws amplify list-jobs --app-id "$APP_ID" --branch-name "$BRANCH" --max-results 20 --query 'jobSummaries[?status==`RUNNING` || status==`PENDING`].jobId' --output text)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force origin
+          EXISTING="$(git describe --tags --match 'v*' --exact-match 2>/dev/null || true)"
+          if [ -n "${EXISTING}" ]; then
+            echo "Commit already tagged as ${EXISTING}"
+            echo "tag=${EXISTING}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          TAG="$(bash scripts/next-release-tag.sh)"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "refs/tags/${TAG}"
+          echo "Created tag ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Cancel superseded Amplify jobs
+        env:
+          APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
+          BRANCH: ${{ steps.meta.outputs.amplify_branch }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_ID}" ]; then
+            echo "AMPLIFY_APP_ID secret is not set; skip deploy"
+            exit 1
+          fi
+          # Production: never interrupt a RUNNING release (skew-protected rollout).
+          # Lower envs: cancel PENDING + RUNNING so the newest merge wins.
+          if [ "$BRANCH" = "main" ]; then
+            QUERY='jobSummaries[?status==`PENDING`].jobId'
+          else
+            QUERY='jobSummaries[?status==`RUNNING` || status==`PENDING`].jobId'
+          fi
+          JOBS=$(aws amplify list-jobs --app-id "$APP_ID" --branch-name "$BRANCH" --max-results 20 --query "$QUERY" --output text)
           for JOB_ID in $JOBS; do
             echo "Cancelling Amplify job $JOB_ID"
             aws amplify stop-job --app-id "$APP_ID" --branch-name "$BRANCH" --job-id "$JOB_ID" || true
@@ -103,7 +163,7 @@ jobs:
         id: start
         env:
           APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
-          BRANCH: ${{ github.ref_name }}
+          BRANCH: ${{ steps.meta.outputs.amplify_branch }}
         run: |
           JOB_ID=$(aws amplify start-job \
             --app-id "$APP_ID" \
@@ -111,12 +171,13 @@ jobs:
             --job-type RELEASE \
             --query 'jobSummary.jobId' \
             --output text)
+          echo "Started Amplify job $JOB_ID on branch $BRANCH"
           echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait for Amplify job
         env:
           APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
-          BRANCH: ${{ github.ref_name }}
+          BRANCH: ${{ steps.meta.outputs.amplify_branch }}
           JOB_ID: ${{ steps.start.outputs.job_id }}
         run: |
           set -euo pipefail
@@ -131,3 +192,38 @@ jobs:
           done
           echo "Timed out waiting for Amplify"
           exit 1
+
+      - name: Dump Amplify failure logs
+        if: failure() && steps.start.outputs.job_id != ''
+        env:
+          APP_ID: ${{ secrets.AMPLIFY_APP_ID }}
+          BRANCH: ${{ steps.meta.outputs.amplify_branch }}
+          JOB_ID: ${{ steps.start.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          aws amplify get-job \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH" \
+            --job-id "$JOB_ID" \
+            --query 'job.{status:summary.status,reason:summary.statusReason,steps:steps}' \
+            --output json | tee /tmp/amplify-job.json
+          python3 - <<'PY'
+          import json
+          import urllib.request
+
+          job = json.load(open("/tmp/amplify-job.json"))
+          print(f"Amplify status={job.get('status')} reason={job.get('reason')}")
+          for step in job.get("steps") or []:
+              name = step.get("stepName")
+              status = step.get("status")
+              reason = step.get("statusReason")
+              print(f"STEP {name} status={status} reason={reason}")
+              if status in ("FAILED", "CANCELLED") and step.get("logUrl"):
+                  print(f"--- log {name} ---")
+                  try:
+                      with urllib.request.urlopen(step["logUrl"], timeout=60) as resp:
+                          text = resp.read().decode("utf-8", "replace")
+                      print(text[-12000:])
+                  except Exception as exc:
+                      print(f"log fetch failed: {exc}")
+          PY

@@ -18,6 +18,27 @@ applications:
             - npm ci
         build:
           commands:
+            # Amplify build env is not available to Next SSR compute unless written here.
+            # See: https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
+            - |
+              set -euo pipefail
+              git fetch --tags --force origin 2>/dev/null || true
+              VERSION="$(git describe --tags --match 'v*' --exact-match 2>/dev/null || true)"
+              if [ -z "${VERSION}" ]; then
+                VERSION="$(git describe --tags --match 'v*' --abbrev=7 2>/dev/null || true)"
+              fi
+              COMMIT="${AWS_COMMIT_ID:-$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)}"
+              if [ -z "${VERSION}" ]; then
+                VERSION="0.0.0-dev+${COMMIT}"
+              fi
+              export NEXT_PUBLIC_APP_VERSION="${VERSION}"
+              export APP_VERSION="${VERSION}"
+              export NEXT_PUBLIC_APP_COMMIT="${COMMIT}"
+              export APP_COMMIT="${COMMIT}"
+              echo "Resolved app version=${VERSION} commit=${COMMIT}"
+              env | grep -e NEXT_PUBLIC_ >> .env.production || true
+              env | grep -e APP_ENV -e APP_VERSION -e APP_COMMIT -e ANEMONE_ >> .env.production || true
+              echo "env_production_lines=$(wc -l < .env.production)"
             - npm run build
       artifacts:
         baseDirectory: .next
