@@ -36,13 +36,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout demo (staging)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: staging
           path: paws-and-tails-demo
 
       - name: Checkout anemone-server-js
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cwoolf88/anemone-server-js
           path: anemone-server-js
@@ -96,7 +96,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # Prefer a PAT so the push can also trigger the CI workflow; the
