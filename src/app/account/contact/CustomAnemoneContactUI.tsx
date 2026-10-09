@@ -4,6 +4,7 @@ import {
   contactSyncStateFromPrimaryBatch,
   injectWidgetStyles,
   renderSyncBlock,
+  resolveAnemoneAttribution,
   sessionPollRefreshLabel,
 } from "anemone-server-js/embed";
 import { useAnemoneConnection } from "@/lib/integrations/useAnemoneConnection";
@@ -134,6 +135,44 @@ function SettingsGearButton({
         <circle cx="12" cy="12" r="3" />
       </svg>
     </button>
+  );
+}
+
+function AnemoneLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+      <g transform="translate(16 16)">
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+          <ellipse key={deg} cx="0" cy="-7.6" rx="2.15" ry="5.4" transform={`rotate(${deg})`} />
+        ))}
+        <path
+          fillRule="evenodd"
+          d="M0 5.6a5.6 5.6 0 1 0 0-11.2 5.6 5.6 0 0 0 0 11.2zm0-3.4a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4z"
+        />
+      </g>
+    </svg>
+  );
+}
+
+/** Required in every custom connect UI: Anemone logo + name and links to its Terms and Privacy. */
+function AnemoneAttribution({ primaryBaseUrl }: { primaryBaseUrl: string | null }) {
+  const { name, termsUrl, privacyUrl } = resolveAnemoneAttribution(primaryBaseUrl);
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-[var(--muted)]">
+      <span className="inline-flex items-center gap-1.5">
+        <AnemoneLogo className="h-3.5 w-3.5" />
+        {name}
+      </span>
+      <nav className="inline-flex items-center gap-1.5" aria-label={`${name} legal`}>
+        <a href={termsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--ink)] hover:underline">
+          Terms
+        </a>
+        <span aria-hidden="true">·</span>
+        <a href={privacyUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--ink)] hover:underline">
+          Privacy
+        </a>
+      </nav>
+    </div>
   );
 }
 
@@ -334,6 +373,8 @@ export function CustomAnemoneContactUI({ primary, saving, onSaveContact }: Props
           details or try again.
         </p>
       ) : null}
+
+      <AnemoneAttribution primaryBaseUrl={info.primaryBaseUrl} />
     </section>
   );
 }
