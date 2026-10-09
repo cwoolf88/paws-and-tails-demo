@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const id = await getSessionUserId();
   if (!id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  const user = getUserById(id);
+  const user = await getUserById(id);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const body = (await request.json().catch(() => null)) as {

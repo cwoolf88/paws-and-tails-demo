@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "externalUserId is required" }, { status: 400 });
   }
 
-  const user = getUserById(externalUserId);
+  const user = await getUserById(externalUserId);
   if (!user) {
     return NextResponse.json({ found: false });
   }

@@ -7,7 +7,7 @@ import { SiteHeaderNav } from "@/components/SiteHeaderNav";
 export async function SiteHeader() {
   const c = await cookies();
   const uid = c.get("paws_user_id")?.value;
-  const u = uid ? getUserById(uid) : null;
+  const u = uid ? await getUserById(uid) : null;
   return (
     <header className="border-b border-[var(--border)] bg-[var(--header-bg)]/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4 sm:px-5">

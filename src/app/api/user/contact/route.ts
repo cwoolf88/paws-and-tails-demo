@@ -11,7 +11,7 @@ type Body = Partial<UpdateUserInput> & { fullName?: string };
 export async function GET() {
   const id = await getSessionUserId();
   if (!id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  const u = getUserById(id);
+  const u = await getUserById(id);
   if (!u) return NextResponse.json({ error: "User not found" }, { status: 404 });
   return NextResponse.json({ user: u });
 }
@@ -19,7 +19,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   const id = await getSessionUserId();
   if (!id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  const before = getUserById(id);
+  const before = await getUserById(id);
   if (!before) return NextResponse.json({ error: "User not found" }, { status: 404 });
   const body = (await request.json().catch(() => null)) as Body | null;
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -33,7 +33,7 @@ export async function PUT(request: Request) {
     postalCode: (body.postalCode ?? before.address.postalCode).trim() || before.address.postalCode,
     countryCode: (body.countryCode ?? before.address.countryCode).trim() || before.address.countryCode,
   };
-  const updated = updateUserById(before.id, next);
+  const updated = await updateUserById(before.id, next);
   if (!updated) return NextResponse.json({ error: "Update failed" }, { status: 500 });
 
   const networkActivity = createServerNetworkCollector();

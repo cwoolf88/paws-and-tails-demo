@@ -4,5 +4,5 @@ import { listUsers } from "@/lib/db/users";
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json({ users: listUsers() });
+  return NextResponse.json({ users: await listUsers() });
 }

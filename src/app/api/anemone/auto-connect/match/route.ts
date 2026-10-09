@@ -7,6 +7,6 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   return handleAutoConnectMatchRequest(request, {
     webhookSecret: getWebhookSecret(),
-    findExternalUserIdByEmail: (email) => getUserByEmail(email)?.id ?? null,
+    findExternalUserIdByEmail: async (email) => (await getUserByEmail(email))?.id ?? null,
   });
 }

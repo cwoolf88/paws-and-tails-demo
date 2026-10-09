@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword, isPasswordSet, verifyPassword } from "@/lib/auth/password";
-import { getDb, type UserRow } from "./client";
+import type { UserRow } from "./client";
+import { getUserStore } from "./userStore";
 import { getAnemoneClientOrNull } from "@/lib/integrations/primaryClient";
+
+export { EmailTakenError } from "./userStore";
 
 export type PublicUser = {
   id: string;
@@ -39,35 +42,25 @@ function rowToUser(r: UserRow): PublicUser {
   };
 }
 
-export function listUsers() {
-  const database = getDb();
-  const rows = database
-    .prepare("SELECT * FROM users ORDER BY full_name ASC")
-    .all() as UserRow[];
+export async function listUsers() {
+  const rows = await (await getUserStore()).list();
   return rows.map((r) => rowToUser(r));
 }
 
-export function getUserById(id: string) {
-  const database = getDb();
-  const row = database.prepare("SELECT * FROM users WHERE id = ?").get(id) as
-    | UserRow
-    | undefined;
+export async function getUserById(id: string) {
+  const row = await (await getUserStore()).getById(id);
   return row ? rowToUser(row) : null;
 }
 
-export function getUserByEmail(email: string) {
-  const row = getUserRowByEmail(email);
+export async function getUserByEmail(email: string) {
+  const row = await getUserRowByEmail(email);
   return row ? rowToUser(row) : null;
 }
 
-function getUserRowByEmail(email: string) {
+async function getUserRowByEmail(email: string) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return null;
-  const database = getDb();
-  const row = database.prepare("SELECT * FROM users WHERE lower(email) = ? LIMIT 1").get(normalized) as
-    | UserRow
-    | undefined;
-  return row ?? null;
+  return (await getUserStore()).getByEmail(normalized);
 }
 
 export type CreateUserInput = {
@@ -77,33 +70,25 @@ export type CreateUserInput = {
   password: string;
 };
 
-export function createUser(input: CreateUserInput) {
-  const database = getDb();
+export async function createUser(input: CreateUserInput) {
   const now = new Date().toISOString();
-  const id = randomUUID();
-  const fullName = `${input.firstName} ${input.lastName}`.trim();
-  const email = input.email.trim();
-  const passwordHash = hashPassword(input.password);
-
-  database
-    .prepare(
-      `INSERT INTO users (
-        id, email, full_name, password_hash, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at
-      ) VALUES (
-        @id, @email, @fullName, @passwordHash, '', '', '', '', '', '', 'US', @now, @now
-      )`,
-    )
-    .run({
-      id,
-      email,
-      fullName,
-      passwordHash,
-      now,
-    });
-
-  const created = getUserById(id);
-  if (!created) throw new Error("Failed to create user");
-  return created;
+  const row: UserRow = {
+    id: randomUUID(),
+    email: input.email.trim(),
+    full_name: `${input.firstName} ${input.lastName}`.trim(),
+    password_hash: hashPassword(input.password),
+    phone: "",
+    line1: "",
+    line2: "",
+    city: "",
+    region: "",
+    postal_code: "",
+    country_code: "US",
+    created_at: now,
+    updated_at: now,
+  };
+  await (await getUserStore()).insert(row);
+  return rowToUser(row);
 }
 
 export type PasswordLoginResult =
@@ -111,11 +96,11 @@ export type PasswordLoginResult =
   | { ok: false; code: "invalid_credentials" | "password_not_set"; message: string };
 
 /** Email + password login used by the browser-agent demo path. */
-export function authenticateWithPassword(
+export async function authenticateWithPassword(
   email: string,
   password: string,
-): PasswordLoginResult {
-  const row = getUserRowByEmail(email);
+): Promise<PasswordLoginResult> {
+  const row = await getUserRowByEmail(email);
   if (!row) {
     return {
       ok: false,
@@ -142,7 +127,7 @@ export function authenticateWithPassword(
 }
 
 export async function deleteUserById(id: string) {
-  const user = getUserById(id);
+  const user = await getUserById(id);
   if (!user) return null;
 
   const client = getAnemoneClientOrNull();
@@ -154,8 +139,7 @@ export async function deleteUserById(id: string) {
     }
   }
 
-  const database = getDb();
-  database.prepare("DELETE FROM users WHERE id = ?").run(id);
+  await (await getUserStore()).delete(id);
   return user;
 }
 
@@ -170,24 +154,17 @@ export type UpdateUserInput = {
   countryCode: string;
 };
 
-export function updateUserById(id: string, data: UpdateUserInput) {
-  const database = getDb();
-  const now = new Date().toISOString();
-  const result = database
-    .prepare(
-      `UPDATE users SET
-        full_name = @fullName,
-        phone = @phone,
-        line1 = @line1,
-        line2 = @line2,
-        city = @city,
-        region = @region,
-        postal_code = @postalCode,
-        country_code = @countryCode,
-        updated_at = @now
-      WHERE id = @id`,
-    )
-    .run({ ...data, id, now });
-  if (result.changes === 0) return null;
-  return getUserById(id);
+export async function updateUserById(id: string, data: UpdateUserInput) {
+  const row = await (await getUserStore()).update(id, {
+    full_name: data.fullName,
+    phone: data.phone,
+    line1: data.line1,
+    line2: data.line2,
+    city: data.city,
+    region: data.region,
+    postal_code: data.postalCode,
+    country_code: data.countryCode,
+    updated_at: new Date().toISOString(),
+  });
+  return row ? rowToUser(row) : null;
 }

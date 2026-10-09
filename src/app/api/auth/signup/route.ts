@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setSessionUserId } from "@/lib/auth/session";
-import { createUser, getUserByEmail } from "@/lib/db/users";
+import { createUser, EmailTakenError, getUserByEmail } from "@/lib/db/users";
 
 export const runtime = "nodejs";
 
@@ -36,11 +36,19 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (getUserByEmail(email)) {
+  if (await getUserByEmail(email)) {
     return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   }
 
-  const user = createUser({ firstName, lastName, email, password });
+  let user;
+  try {
+    user = await createUser({ firstName, lastName, email, password });
+  } catch (err) {
+    if (err instanceof EmailTakenError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    throw err;
+  }
   await setSessionUserId(user.id);
   return NextResponse.json({ user }, { status: 201 });
 }

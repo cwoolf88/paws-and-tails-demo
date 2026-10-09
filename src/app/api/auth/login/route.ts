@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const result = authenticateWithPassword(email, password);
+    const result = await authenticateWithPassword(email, password);
     if (!result.ok) {
       const status = result.code === "password_not_set" ? 409 : 401;
       return NextResponse.json(
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = getUserById(id);
+  const user = await getUserById(id);
   if (!user) {
     return NextResponse.json({ error: "Unknown demo user." }, { status: 404 });
   }

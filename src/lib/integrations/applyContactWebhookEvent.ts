@@ -14,11 +14,11 @@ type RawEnvelope = {
  * Application mapping from a verified `contact.changed` event into the demo's user row.
  * Pass the raw JSON object for optional fields the SDK parser has not yet normalized.
  */
-export function applyContactChangeFromPrimary(
+export async function applyContactChangeFromPrimary(
   event: ContactChangeWebhookEvent,
   raw: RawEnvelope,
-): { ok: true; user: PublicUser } | { ok: false; reason: string } {
-  const user = getUserById(event.externalUserId);
+): Promise<{ ok: true; user: PublicUser } | { ok: false; reason: string }> {
+  const user = await getUserById(event.externalUserId);
   if (!user) {
     return { ok: false, reason: "No local user matches externalUserId" };
   }
@@ -47,7 +47,7 @@ export function applyContactChangeFromPrimary(
     if (a.postalCode !== undefined) next.postalCode = a.postalCode;
     if (a.countryCode !== undefined) next.countryCode = a.countryCode;
   }
-  const updated = updateUserById(user.id, next);
+  const updated = await updateUserById(user.id, next);
   if (!updated) return { ok: false, reason: "Update failed" };
   return { ok: true, user: updated };
 }
@@ -56,18 +56,18 @@ export function applyContactChangeFromPrimary(
  * Applies an approved `contact.update.reviewed` event from anemone.
  * Rejected reviews are acknowledged without mutating local state.
  */
-export function applyContactReviewFromPrimary(
+export async function applyContactReviewFromPrimary(
   event: ContactUpdateReviewedEvent,
-): { ok: true; user: PublicUser; applied: boolean } | { ok: false; reason: string } {
+): Promise<{ ok: true; user: PublicUser; applied: boolean } | { ok: false; reason: string }> {
   if (event.status === "rejected") {
-    const user = getUserById(event.externalUserId);
+    const user = await getUserById(event.externalUserId);
     if (!user) {
       return { ok: false, reason: "No local user matches externalUserId" };
     }
     return { ok: true, user, applied: false };
   }
 
-  const user = getUserById(event.externalUserId);
+  const user = await getUserById(event.externalUserId);
   if (!user) {
     return { ok: false, reason: "No local user matches externalUserId" };
   }
@@ -100,7 +100,7 @@ export function applyContactReviewFromPrimary(
     if (a.countryCode !== undefined) next.countryCode = a.countryCode;
   }
 
-  const updated = updateUserById(user.id, next);
+  const updated = await updateUserById(user.id, next);
   if (!updated) return { ok: false, reason: "Update failed" };
   return { ok: true, user: updated, applied: true };
 }

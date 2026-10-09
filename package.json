@@ -17,6 +17,8 @@
     "sdk:sync:local": "node ./scripts/sync-local-sdk.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1148.0",
+    "@aws-sdk/lib-dynamodb": "^3.1148.0",
     "anemone-server-js": "file:../anemone-server-js",
     "better-sqlite3": "^12.9.0",
     "next": "15.5.15",

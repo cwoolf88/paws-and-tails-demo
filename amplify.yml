@@ -37,7 +37,7 @@ applications:
               export APP_COMMIT="${COMMIT}"
               echo "Resolved app version=${VERSION} commit=${COMMIT}"
               env | grep -e NEXT_PUBLIC_ >> .env.production || true
-              env | grep -e APP_ENV -e APP_VERSION -e APP_COMMIT -e ANEMONE_ >> .env.production || true
+              env | grep -e APP_ENV -e APP_VERSION -e APP_COMMIT -e ANEMONE_ -e PAWS_ >> .env.production || true
               echo "env_production_lines=$(wc -l < .env.production)"
             - npm run build
       artifacts:

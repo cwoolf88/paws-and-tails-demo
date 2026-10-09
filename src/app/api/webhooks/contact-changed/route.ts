@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   if (event.event === "contact.update.reviewed") {
-    const r = applyContactReviewFromPrimary(event);
+    const r = await applyContactReviewFromPrimary(event);
     if (!r.ok) {
       return NextResponse.json(
         { ok: false, reason: r.reason, event },
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       phone?: { e164?: string; raw?: string };
       email?: { address?: string };
     };
-    const r = applyContactChangeFromPrimary(event, {
+    const r = await applyContactChangeFromPrimary(event, {
       name: full.name,
       phone: full.phone,
       email: full.email,
