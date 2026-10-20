@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { setSessionUserId } from "@/lib/auth/session";
+import { requireStaffSession } from "@/lib/auth/staff-session";
 import {
   authenticateWithPassword,
   getUserById,
+  userOwnedBy,
 } from "@/lib/db/users";
 
 export const runtime = "nodejs";
@@ -40,6 +42,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ user: result.user });
   }
 
+  const authz = await requireStaffSession();
+  if (!authz.ok) return authz.response;
+
   const id = body.userId?.trim();
   if (!id) {
     return NextResponse.json(
@@ -51,6 +56,12 @@ export async function POST(request: Request) {
   const user = await getUserById(id);
   if (!user) {
     return NextResponse.json({ error: "Unknown demo user." }, { status: 404 });
+  }
+  if (!userOwnedBy(user, authz.staff.anemoneUserId)) {
+    return NextResponse.json(
+      { error: "That demo user is not associated with your Anemone account.", code: "forbidden" },
+      { status: 403 },
+    );
   }
 
   await setSessionUserId(user.id);

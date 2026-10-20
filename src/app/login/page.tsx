@@ -3,6 +3,11 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { SignUpModal } from "@/components/SignUpModal";
+import { PLATFORM_NAME } from "@/lib/config";
+import {
+  invalidatePrimarySessionCache,
+  probePrimaryStaffGate,
+} from "@/lib/integrations/primarySession";
 
 type DemoUser = {
   id: string;
@@ -10,12 +15,21 @@ type DemoUser = {
   email: string;
 };
 
+type StaffInfo = {
+  anemoneUserId: string;
+  role: string;
+};
+
 function LoginForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const [users, setUsers] = useState<DemoUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [staff, setStaff] = useState<StaffInfo | null>(null);
+  const [primaryBaseUrl, setPrimaryBaseUrl] = useState<string | null>(null);
+  const [primarySignInUrl, setPrimarySignInUrl] = useState<string | null>(null);
+  const [staffChecking, setStaffChecking] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [passwordErr, setPasswordErr] = useState<string | null>(null);
@@ -25,11 +39,18 @@ function LoginForm() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const next = sp.get("next") || "/account/contact";
 
-  const loadUsers = useCallback(async () => {
+  const loadOwnedUsers = useCallback(async () => {
+    setLoading(true);
     const [usersRes, meRes] = await Promise.all([
       fetch("/api/auth/users"),
       fetch("/api/auth/me"),
     ]);
+    if (usersRes.status === 401) {
+      setStaff(null);
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
     const usersData = (await usersRes.json()) as { users: DemoUser[] };
     const meData = (await meRes.json()) as { user: DemoUser | null };
     setUsers(
@@ -43,13 +64,63 @@ function LoginForm() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
+  const establishStaffSession = useCallback(async () => {
+    setStaffChecking(true);
+    setErr(null);
+    const metaRes = await fetch("/api/auth/staff-session");
+    const meta = (await metaRes.json()) as {
+      staff: StaffInfo | null;
+      primaryBaseUrl: string | null;
+      primarySignInUrl: string | null;
+    };
+    setPrimaryBaseUrl(meta.primaryBaseUrl);
+    setPrimarySignInUrl(meta.primarySignInUrl);
+
+    if (meta.staff) {
+      setStaff(meta.staff);
+      setStaffChecking(false);
+      await loadOwnedUsers();
+      return;
+    }
+
+    if (!meta.primaryBaseUrl) {
+      setStaff(null);
+      setStaffChecking(false);
+      return;
+    }
+
+    invalidatePrimarySessionCache();
+    const probe = await probePrimaryStaffGate(meta.primaryBaseUrl, { force: true });
+    if (probe.staffEligible && probe.staffGateToken) {
+      const exchange = await fetch("/api/auth/staff-session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ staffGateToken: probe.staffGateToken }),
+      });
+      if (exchange.ok) {
+        const data = (await exchange.json()) as { staff: StaffInfo };
+        setStaff(data.staff);
+        setStaffChecking(false);
+        await loadOwnedUsers();
+        return;
+      }
+      setErr("Could not verify your Anemone staff session. Try signing in again.");
+    } else if (probe.signedIn && !probe.staffEligible) {
+      setErr(
+        `Your ${PLATFORM_NAME} account does not have tenant staff (or higher) permissions needed for this demo.`,
+      );
+    }
+    setStaff(null);
+    setStaffChecking(false);
+  }, [loadOwnedUsers]);
 
   useEffect(() => {
-    if (sp.get("signup") === "1") setSignUpOpen(true);
-  }, [sp]);
+    void establishStaffSession();
+  }, [establishStaffSession]);
+
+  useEffect(() => {
+    if (sp.get("signup") === "1" && staff) setSignUpOpen(true);
+  }, [sp, staff]);
 
   async function signInWithPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -116,7 +187,7 @@ function LoginForm() {
       return;
     }
     setBusyId(null);
-    await loadUsers();
+    await loadOwnedUsers();
   }
 
   function onSignUpSuccess() {
@@ -187,15 +258,44 @@ function LoginForm() {
         <div className="rounded-3xl border border-[var(--border)] bg-white/90 p-6 shadow">
           <h2 className="font-display text-xl font-bold">Demo users</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Pick an existing demo account or create a new one. Switching signs out the current user
-            first. Accounts created before passwords were added may only work from this picker.
+            Create and switch among demo accounts tied to your {PLATFORM_NAME} staff login (tenant
+            staff or above). Other people’s demo accounts stay hidden.
           </p>
 
-          {loading ? (
-            <p className="mt-5 text-sm text-[var(--muted)]">Loading demo users…</p>
+          {staffChecking ? (
+            <p className="mt-5 text-sm text-[var(--muted)]">Checking {PLATFORM_NAME} staff access…</p>
+          ) : !staff ? (
+            <div className="mt-5 space-y-3">
+              <p className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--page)] px-4 py-3 text-sm text-[var(--muted)]">
+                Sign in to {PLATFORM_NAME} with a staff account to manage demo users.
+              </p>
+              {primarySignInUrl ? (
+                <a
+                  href={primarySignInUrl}
+                  className="btn-primary inline-flex w-full items-center justify-center rounded-xl py-2.5 text-sm"
+                >
+                  Sign in to {PLATFORM_NAME}
+                </a>
+              ) : (
+                <p className="text-sm text-red-600">
+                  Set ANEMONE_PRIMARY_BASE_URL so this demo can verify {PLATFORM_NAME} staff access.
+                </p>
+              )}
+              {primaryBaseUrl ? (
+                <button
+                  type="button"
+                  onClick={() => void establishStaffSession()}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--page)] py-2.5 text-sm font-semibold"
+                >
+                  I already signed in — refresh
+                </button>
+              ) : null}
+            </div>
+          ) : loading ? (
+            <p className="mt-5 text-sm text-[var(--muted)]">Loading your demo users…</p>
           ) : users.length === 0 ? (
             <p className="mt-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--page)] px-4 py-3 text-sm text-[var(--muted)]">
-              No demo users yet. Create one below to get started.
+              No demo users for your account yet. Create one below to get started.
             </p>
           ) : (
             <ul className="mt-5 space-y-2">
@@ -258,15 +358,17 @@ function LoginForm() {
 
           {err ? <p className="mt-4 text-sm text-red-600">{err}</p> : null}
 
-          <div className="mt-4 border-t border-[var(--border)] pt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setSignUpOpen(true)}
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--page)] py-2.5 text-sm font-semibold text-[var(--ink)] shadow-sm hover:bg-[var(--accent-btn)]"
-            >
-              Sign up
-            </button>
-          </div>
+          {staff ? (
+            <div className="mt-4 border-t border-[var(--border)] pt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setSignUpOpen(true)}
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--page)] py-2.5 text-sm font-semibold text-[var(--ink)] shadow-sm hover:bg-[var(--accent-btn)]"
+              >
+                Sign up
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
       <SignUpModal open={signUpOpen} onClose={() => setSignUpOpen(false)} onSuccess={onSignUpSuccess} />

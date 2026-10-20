@@ -17,11 +17,15 @@ export function getPrimarySignInUrl(redirectUrl?: string) {
   return `${base}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
 }
 
-function demoBaseUrl() {
+export function getDemoBaseUrl() {
   return (
     process.env.ANEMONE_DEMO_BASE_URL?.trim().replace(/\/$/, "") ||
     "http://127.0.0.1:3001"
   );
+}
+
+function demoBaseUrl() {
+  return getDemoBaseUrl();
 }
 
 /** Full contact page (legacy / non-popup flows). */

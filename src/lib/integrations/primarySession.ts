@@ -5,6 +5,10 @@ export type PrimarySession = {
   email: string | null;
   connected: boolean;
   merchantSettingsPath: string | null;
+  staffEligible: boolean;
+  staffRole: string | null;
+  anemoneUserId: string | null;
+  staffGateToken: string | null;
 };
 
 const PRIMARY_SESSION_MESSAGE = "anemone-session";
@@ -19,6 +23,19 @@ type CacheEntry = { at: number; result: PrimarySession };
 const resultCache = new Map<string, CacheEntry>();
 let inFlight: Promise<PrimarySession> | null = null;
 let inFlightKey = "";
+
+function emptySession(): PrimarySession {
+  return {
+    signedIn: false,
+    email: null,
+    connected: false,
+    merchantSettingsPath: null,
+    staffEligible: false,
+    staffRole: null,
+    anemoneUserId: null,
+    staffGateToken: null,
+  };
+}
 
 function cacheKey(base: string, connectExternalUserId: string) {
   return `${base}|${connectExternalUserId}|${window.location.origin}`;
@@ -54,24 +71,19 @@ function probeOnce(
   return new Promise((resolve) => {
     const params = new URLSearchParams({
       parent_origin: parentOrigin,
-      external_user_id: connectExternalUserId,
     });
+    if (connectExternalUserId) {
+      params.set("external_user_id", connectExternalUserId);
+    }
 
     const iframe = document.createElement("iframe");
     iframe.hidden = true;
     iframe.title = `${PLATFORM_NAME} session check`;
 
     let settled = false;
-    const timeout = window.setTimeout(finish, PROBE_TIMEOUT_MS);
+    const timeout = window.setTimeout(() => finish(emptySession()), PROBE_TIMEOUT_MS);
 
-    function finish(
-      result: PrimarySession = {
-        signedIn: false,
-        email: null,
-        connected: false,
-        merchantSettingsPath: null,
-      },
-    ) {
+    function finish(result: PrimarySession = emptySession()) {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
@@ -89,6 +101,10 @@ function probeOnce(
         linked?: boolean;
         connected?: boolean;
         merchantSettingsPath?: string | null;
+        staffEligible?: boolean;
+        staffRole?: string | null;
+        anemoneUserId?: string | null;
+        staffGateToken?: string | null;
       };
       if (data?.type !== PRIMARY_SESSION_MESSAGE) return;
       finish({
@@ -97,6 +113,10 @@ function probeOnce(
         connected: !!(data.connected ?? data.linked),
         merchantSettingsPath:
           typeof data.merchantSettingsPath === "string" ? data.merchantSettingsPath : null,
+        staffEligible: !!data.staffEligible,
+        staffRole: typeof data.staffRole === "string" ? data.staffRole : null,
+        anemoneUserId: typeof data.anemoneUserId === "string" ? data.anemoneUserId : null,
+        staffGateToken: typeof data.staffGateToken === "string" ? data.staffGateToken : null,
       });
     }
 
@@ -135,4 +155,12 @@ export function probePrimaryClerkSession(
     });
 
   return inFlight;
+}
+
+/** Staff-gate probe for the login page (no partner external user id required). */
+export function probePrimaryStaffGate(
+  primaryBaseUrl: string,
+  options?: { force?: boolean },
+): Promise<PrimarySession> {
+  return probePrimaryClerkSession(primaryBaseUrl, "", { force: options?.force ?? true });
 }

@@ -21,7 +21,12 @@ function toRow(item: Record<string, unknown> | undefined): UserRow | null {
   if (!item) return null;
   const row = { ...item };
   delete row.pk;
-  return row as UserRow;
+  const typed = row as UserRow;
+  return {
+    ...typed,
+    owner_anemone_user_id:
+      typeof typed.owner_anemone_user_id === "string" ? typed.owner_anemone_user_id : "",
+  };
 }
 
 function isConditionalFailure(err: unknown) {

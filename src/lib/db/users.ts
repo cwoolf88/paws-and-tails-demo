@@ -19,6 +19,7 @@ export type PublicUser = {
     postalCode: string;
     countryCode: string;
   };
+  ownerAnemoneUserId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -37,14 +38,19 @@ function rowToUser(r: UserRow): PublicUser {
       postalCode: r.postal_code,
       countryCode: r.country_code,
     },
+    ownerAnemoneUserId: r.owner_anemone_user_id ?? "",
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
 
-export async function listUsers() {
+export async function listUsersOwnedBy(anemoneUserId: string) {
+  const owner = anemoneUserId.trim();
+  if (!owner) return [];
   const rows = await (await getUserStore()).list();
-  return rows.map((r) => rowToUser(r));
+  return rows
+    .filter((r) => (r.owner_anemone_user_id ?? "") === owner)
+    .map((r) => rowToUser(r));
 }
 
 export async function getUserById(id: string) {
@@ -68,9 +74,12 @@ export type CreateUserInput = {
   lastName: string;
   email: string;
   password: string;
+  ownerAnemoneUserId: string;
 };
 
 export async function createUser(input: CreateUserInput) {
+  const owner = input.ownerAnemoneUserId.trim();
+  if (!owner) throw new Error("ownerAnemoneUserId is required");
   const now = new Date().toISOString();
   const row: UserRow = {
     id: randomUUID(),
@@ -84,6 +93,7 @@ export async function createUser(input: CreateUserInput) {
     region: "",
     postal_code: "",
     country_code: "US",
+    owner_anemone_user_id: owner,
     created_at: now,
     updated_at: now,
   };
@@ -124,6 +134,10 @@ export async function authenticateWithPassword(
     };
   }
   return { ok: true, user: rowToUser(row) };
+}
+
+export function userOwnedBy(user: PublicUser, anemoneUserId: string) {
+  return user.ownerAnemoneUserId === anemoneUserId.trim();
 }
 
 export async function deleteUserById(id: string) {

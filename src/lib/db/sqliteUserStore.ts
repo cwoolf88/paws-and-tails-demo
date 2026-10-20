@@ -21,9 +21,11 @@ export function createSqliteUserStore(): UserStore {
       getDb()
         .prepare(
           `INSERT INTO users (
-            id, email, full_name, password_hash, phone, line1, line2, city, region, postal_code, country_code, created_at, updated_at
+            id, email, full_name, password_hash, phone, line1, line2, city, region, postal_code, country_code,
+            owner_anemone_user_id, created_at, updated_at
           ) VALUES (
-            @id, @email, @full_name, @password_hash, @phone, @line1, @line2, @city, @region, @postal_code, @country_code, @created_at, @updated_at
+            @id, @email, @full_name, @password_hash, @phone, @line1, @line2, @city, @region, @postal_code, @country_code,
+            @owner_anemone_user_id, @created_at, @updated_at
           )`,
         )
         .run(row);

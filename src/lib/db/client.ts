@@ -6,7 +6,7 @@ const DB_PATH = path.join(process.cwd(), "data", "paws-tails.db");
 
 let dbInstance: Database.Database | null = null;
 
-const EXPECTED_USER_COLUMNS = [
+const BASE_USER_COLUMNS = [
   "id",
   "email",
   "full_name",
@@ -22,11 +22,9 @@ const EXPECTED_USER_COLUMNS = [
   "updated_at",
 ] as const;
 
-function usersTableSchemaOk(database: Database.Database) {
+function columnNames(database: Database.Database): Set<string> {
   const cols = database.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-  if (cols.length === 0) return false;
-  const names = new Set(cols.map((c) => c.name));
-  return EXPECTED_USER_COLUMNS.every((name) => names.has(name)) && names.size === EXPECTED_USER_COLUMNS.length;
+  return new Set(cols.map((c) => c.name));
 }
 
 function createUsersTable(database: Database.Database) {
@@ -43,6 +41,7 @@ function createUsersTable(database: Database.Database) {
       region TEXT NOT NULL DEFAULT '',
       postal_code TEXT NOT NULL DEFAULT '',
       country_code TEXT NOT NULL DEFAULT 'US',
+      owner_anemone_user_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -68,9 +67,16 @@ function migrate(database: Database.Database) {
     );
   `);
 
-  if (!usersTableSchemaOk(database)) {
+  const names = columnNames(database);
+  const missingBase = BASE_USER_COLUMNS.some((name) => !names.has(name));
+  if (missingBase) {
     database.exec(`DROP TABLE IF EXISTS users`);
     createUsersTable(database);
+    return;
+  }
+
+  if (!names.has("owner_anemone_user_id")) {
+    database.exec(`ALTER TABLE users ADD COLUMN owner_anemone_user_id TEXT NOT NULL DEFAULT ''`);
   }
 }
 
@@ -96,6 +102,8 @@ export type UserRow = {
   region: string;
   postal_code: string;
   country_code: string;
+  /** Anemone staff user id that created this demo account; empty for legacy rows. */
+  owner_anemone_user_id: string;
   created_at: string;
   updated_at: string;
 };

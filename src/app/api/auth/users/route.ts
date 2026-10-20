@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { listUsers } from "@/lib/db/users";
+import { requireStaffSession } from "@/lib/auth/staff-session";
+import { listUsersOwnedBy } from "@/lib/db/users";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json({ users: await listUsers() });
+  const authz = await requireStaffSession();
+  if (!authz.ok) return authz.response;
+  return NextResponse.json({ users: await listUsersOwnedBy(authz.staff.anemoneUserId) });
 }
