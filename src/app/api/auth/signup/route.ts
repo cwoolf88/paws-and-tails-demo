@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { setSessionUserId } from "@/lib/auth/session";
+import { requireStaffSession } from "@/lib/auth/staff-session";
 import { createUser, EmailTakenError, getUserByEmail } from "@/lib/db/users";
 
 export const runtime = "nodejs";
@@ -16,6 +17,9 @@ function isValidEmail(email: string) {
 }
 
 export async function POST(request: Request) {
+  const authz = await requireStaffSession();
+  if (!authz.ok) return authz.response;
+
   const body = (await request.json().catch(() => null)) as Body | null;
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
 
@@ -42,7 +46,13 @@ export async function POST(request: Request) {
 
   let user;
   try {
-    user = await createUser({ firstName, lastName, email, password });
+    user = await createUser({
+      firstName,
+      lastName,
+      email,
+      password,
+      ownerAnemoneUserId: authz.staff.anemoneUserId,
+    });
   } catch (err) {
     if (err instanceof EmailTakenError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
