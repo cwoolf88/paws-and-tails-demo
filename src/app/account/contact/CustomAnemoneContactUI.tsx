@@ -181,7 +181,7 @@ function ConnectionLoadingSkeleton() {
     <section
       className="rounded-2xl border border-[var(--border)] bg-white/90 p-4 text-sm shadow"
       aria-busy="true"
-      aria-label={PLATFORM_NAME}
+      aria-label="Address profile"
     >
       <div className="animate-pulse space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -268,11 +268,11 @@ export function CustomAnemoneContactUI({ primary, saving, onSaveContact }: Props
   return (
     <section
       className="rounded-2xl border border-[var(--border)] bg-white/90 p-4 text-sm shadow"
-      aria-label={PLATFORM_NAME}
+      aria-label="Address profile"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold text-[var(--ink)]">{PLATFORM_NAME}</h2>
+          <h2 className="font-semibold text-[var(--ink)]">Address profile</h2>
           <p className="mt-1 text-[var(--muted)]">
             {connectionSubtitle(connected, signedIntoPrimary, TENANT_NAME)}
           </p>

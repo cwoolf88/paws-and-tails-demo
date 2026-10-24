@@ -33,7 +33,7 @@ export function AnemoneConnectionToggle() {
     <div className="rounded-2xl border border-[var(--border)] bg-white/90 p-4 text-sm shadow">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-[var(--ink)]">{PLATFORM_NAME}</h2>
+          <h2 className="font-semibold text-[var(--ink)]">Address profile</h2>
           <p className="mt-1 text-[var(--muted)]">
             {connected ? (
               <>

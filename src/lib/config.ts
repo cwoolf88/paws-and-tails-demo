@@ -1,6 +1,7 @@
 export const TENANT_NAME = "Paws and Tails";
 
-export const PLATFORM_NAME = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Anemone";
+/** In-sentence Anemone name (not the integrating site; never includes "OS"). */
+export const PLATFORM_NAME = "Anemone";
 
 export const platformBrand = {
   productName: PLATFORM_NAME,
