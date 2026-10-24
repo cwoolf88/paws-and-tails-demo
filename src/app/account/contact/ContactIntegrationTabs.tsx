@@ -22,7 +22,7 @@ export function ContactIntegrationTabs({ active, onChange }: Props) {
   return (
     <div className="space-y-2">
       <div
-        className="inline-flex w-full max-w-xl flex-col gap-1 rounded-xl border border-[var(--border)] bg-white/80 p-1 sm:flex-row"
+        className="inline-flex w-full max-w-xl flex-row gap-1 rounded-xl border border-[var(--border)] bg-white/80 p-1"
         role="tablist"
         aria-label="Integration style"
       >
@@ -35,7 +35,7 @@ export function ContactIntegrationTabs({ active, onChange }: Props) {
             aria-controls={`contact-panel-${tab.id}`}
             id={`contact-tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
-            className={`flex-1 rounded-lg px-3 py-2 text-left text-sm font-semibold transition sm:text-center ${
+            className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-center text-xs font-semibold transition sm:px-3 sm:text-sm ${
               active === tab.id
                 ? "bg-[var(--accent-btn)] text-[var(--ink)] shadow-sm ring-1 ring-[var(--accent-btn-border)]"
                 : "text-[var(--muted)] hover:bg-[var(--page)] hover:text-[var(--ink)]"
