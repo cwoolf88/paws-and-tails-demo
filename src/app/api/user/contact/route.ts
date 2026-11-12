@@ -23,15 +23,21 @@ export async function PUT(request: Request) {
   if (!before) return NextResponse.json({ error: "User not found" }, { status: 404 });
   const body = (await request.json().catch(() => null)) as Body | null;
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  // Required fields fall back when blank. line2 is optional — empty string must clear Apt/unit.
+  const required = (next: string | undefined, fallback: string) =>
+    (next ?? fallback).trim() || fallback;
   const next: UpdateUserInput = {
-    fullName: (body.fullName ?? before.fullName).trim() || before.fullName,
-    phone: (body.phone ?? before.phone).trim() || before.phone,
-    line1: (body.line1 ?? before.address.line1).trim() || before.address.line1,
-    line2: (body.line2 ?? before.address.line2).trim() || before.address.line2,
-    city: (body.city ?? before.address.city).trim() || before.address.city,
-    region: (body.region ?? before.address.region).trim() || before.address.region,
-    postalCode: (body.postalCode ?? before.address.postalCode).trim() || before.address.postalCode,
-    countryCode: (body.countryCode ?? before.address.countryCode).trim() || before.address.countryCode,
+    fullName: required(body.fullName, before.fullName),
+    phone: required(body.phone, before.phone),
+    line1: required(body.line1, before.address.line1),
+    line2:
+      body.line2 === undefined || body.line2 === null
+        ? before.address.line2
+        : body.line2.trim(),
+    city: required(body.city, before.address.city),
+    region: required(body.region, before.address.region),
+    postalCode: required(body.postalCode, before.address.postalCode),
+    countryCode: required(body.countryCode, before.address.countryCode),
   };
   const updated = await updateUserById(before.id, next);
   if (!updated) return NextResponse.json({ error: "Update failed" }, { status: 500 });
