@@ -18,6 +18,17 @@ export function getPrimarySignInUrl(redirectUrl?: string) {
   return `${base}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
 }
 
+/**
+ * Top-level handoff on Anemone: signs staff in if needed, then redirects back to
+ * `returnTo` with a short-lived staff gate token in the URL fragment. Works when
+ * a cross-site iframe cannot see the Anemone session cookie.
+ */
+export function getPrimaryStaffHandoffUrl(returnTo: string) {
+  const base = getPrimaryBaseUrl();
+  if (!base) return "";
+  return `${base}/auth/demo-staff-handoff?return_to=${encodeURIComponent(returnTo)}`;
+}
+
 export function getDemoBaseUrl() {
   return (
     process.env.ANEMONE_DEMO_BASE_URL?.trim().replace(/\/$/, "") ||

@@ -9,7 +9,7 @@ import {
   mockStaffSessionIfAllowed,
   setStaffSession,
 } from "@/lib/auth/staff-session";
-import { getDemoBaseUrl, getPrimaryBaseUrl, getPrimarySignInUrl } from "@/lib/config";
+import { getDemoBaseUrl, getPrimaryBaseUrl, getPrimaryStaffHandoffUrl } from "@/lib/config";
 
 export const runtime = "nodejs";
 
@@ -25,7 +25,7 @@ export async function GET() {
     staff,
     primaryBaseUrl: primaryBaseUrl || null,
     primarySignInUrl: primaryBaseUrl
-      ? getPrimarySignInUrl(`${getDemoBaseUrl()}/login`)
+      ? getPrimaryStaffHandoffUrl(`${getDemoBaseUrl()}/login`)
       : null,
   });
 }
