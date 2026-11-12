@@ -67,6 +67,39 @@ function LoginForm() {
   const establishStaffSession = useCallback(async () => {
     setStaffChecking(true);
     setErr(null);
+
+    // Returning from the Anemone handoff (/auth/demo-staff-handoff): the token or
+    // error arrives in the URL fragment so it never reaches server logs.
+    const handoff = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const handoffToken = handoff.get("staff_gate_token")?.trim() ?? "";
+    const handoffError = handoff.get("staff_gate_error")?.trim() ?? "";
+    if (handoffToken || handoffError) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    if (handoffToken) {
+      const exchange = await fetch("/api/auth/staff-session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ staffGateToken: handoffToken }),
+      });
+      if (exchange.ok) {
+        const data = (await exchange.json()) as { staff: StaffInfo };
+        setStaff(data.staff);
+        setStaffChecking(false);
+        await loadOwnedUsers();
+        return;
+      }
+      setErr("Could not verify your Anemone staff session. Try signing in again.");
+    } else if (handoffError) {
+      setErr(
+        handoffError === "ineligible"
+          ? `Your ${PLATFORM_NAME} account does not have tenant staff (or higher) permissions needed for this demo.`
+          : handoffError === "not_configured"
+            ? `${PLATFORM_NAME} is missing ANEMONE_DEMO_STAFF_GATE_SECRET for this environment, so it cannot issue a staff token.`
+            : `No ${PLATFORM_NAME} account is linked to that sign-in.`,
+      );
+    }
+
     const metaRes = await fetch("/api/auth/staff-session");
     const meta = (await metaRes.json()) as {
       staff: StaffInfo | null;
